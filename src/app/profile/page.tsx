@@ -9,6 +9,7 @@ import { doc, getFirestore } from "firebase/firestore";
 import { Edit, Loader2 } from "lucide-react";
 import type { User } from '@/lib/types';
 import { Skeleton } from "@/components/ui/skeleton";
+import AnonymousProfile from "@/components/anonymous-profile";
 
 function ProfileSkeleton() {
     return (
@@ -43,6 +44,7 @@ function ProfileSkeleton() {
 export default function ProfilePage() {
     const { user, isUserLoading } = useUser();
     const firestore = getFirestore();
+    const isAnonymous = user?.isAnonymous;
 
     const userDocRef = useMemoFirebase(() => {
         if (!user) return null;
@@ -59,6 +61,14 @@ export default function ProfilePage() {
                 <ProfileSkeleton />
             </div>
         );
+    }
+
+    if (isAnonymous) {
+        return (
+            <div className="container mx-auto max-w-2xl px-4 py-8">
+                <AnonymousProfile />
+            </div>
+        )
     }
     
     if (!userProfile) {
