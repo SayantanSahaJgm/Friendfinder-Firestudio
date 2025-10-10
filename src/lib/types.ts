@@ -14,8 +14,13 @@ export type User = {
 export type Story = {
   id: string;
   userId: string;
-  mediaUrl: string;
+  text: string;
+  mediaUrl?: string;
   timestamp: Timestamp;
+  user: {
+    username: string;
+    profilePictureUrl?: string;
+  }
 };
 
 export type Post = {

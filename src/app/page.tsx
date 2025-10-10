@@ -5,34 +5,99 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Camera, Loader2, Plus, WifiOff } from 'lucide-react';
+import { Camera, Loader2, Plus, WifiOff, Users } from 'lucide-react';
 import { PostCard } from '@/components/post-card';
 import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, limit, serverTimestamp, doc } from 'firebase/firestore';
-import type { Post } from '@/lib/types';
+import { collection, query, orderBy, limit, serverTimestamp, doc, where, Timestamp } from 'firebase/firestore';
+import type { Post, Story } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 function Stories() {
-  // This is a placeholder for story functionality.
-  // In a real app, you would fetch stories from Firestore.
+  const { firestore } = useFirebase();
+  const { user } = useUser();
+  const [allStories, setAllStories] = useState<Story[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Note: This fetches stories from ALL users. In a real-world scenario with many users,
+  // you'd likely fetch stories only from friends or a curated list of users.
+  // This approach is for demonstration purposes.
+  useEffect(() => {
+    if (!firestore) return;
+
+    const fetchAllUserStories = async () => {
+        setIsLoading(true);
+        // Fetch all users first
+        const usersSnapshot = await getDocs(collection(firestore, 'users'));
+        const storyPromises: Promise<QuerySnapshot<DocumentData>>[] = [];
+        
+        // For each user, create a query to get their recent stories
+        usersSnapshot.forEach(userDoc => {
+            const twentyFourHoursAgo = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+            const storiesQuery = query(
+                collection(firestore, `users/${userDoc.id}/stories`),
+                where('timestamp', '>', twentyFourHoursAgo),
+                orderBy('timestamp', 'desc')
+            );
+            storyPromises.push(getDocs(storiesQuery));
+        });
+
+        // Resolve all story queries
+        const allStorySnapshots = await Promise.all(storyPromises);
+        const fetchedStories: Story[] = [];
+        allStorySnapshots.forEach(storySnapshot => {
+            storySnapshot.forEach(doc => {
+                fetchedStories.push({ id: doc.id, ...doc.data() } as Story);
+            });
+        });
+
+        // Sort all stories by timestamp
+        fetchedStories.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+        
+        setAllStories(fetchedStories);
+        setIsLoading(false);
+    }
+    
+    fetchAllUserStories();
+
+  }, [firestore]);
+
   return (
-    <div className="flex items-center space-x-4 overflow-x-auto pb-4">
-      <div className="flex-shrink-0 text-center">
-        <div className="relative">
-          <Avatar className="h-16 w-16 border-2 border-dashed border-muted-foreground">
-            <AvatarFallback>U</AvatarFallback>
-          </Avatar>
-          <Button size="icon" className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-primary">
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <p className="mt-2 text-xs font-medium text-muted-foreground">Your Story</p>
+    <ScrollArea className="w-full whitespace-nowrap">
+      <div className="flex items-center space-x-4 pb-4">
+        <Link href="/add-post" className="flex-shrink-0 text-center">
+            <div className="relative">
+            <Avatar className="h-16 w-16 border-2 border-dashed border-muted-foreground">
+                <AvatarFallback>
+                    <Plus className="h-6 w-6" />
+                </AvatarFallback>
+            </Avatar>
+            </div>
+            <p className="mt-2 text-xs font-medium text-muted-foreground">Your Story</p>
+        </Link>
+        
+        {isLoading && Array.from({length: 5}).map((_, i) => (
+            <div key={i} className="flex-shrink-0 text-center animate-pulse">
+                <div className="h-16 w-16 rounded-full bg-muted"></div>
+                <div className="h-2 w-12 mt-2 rounded bg-muted mx-auto"></div>
+            </div>
+        ))}
+
+        {!isLoading && allStories.map(story => (
+            <div key={story.id} className="flex-shrink-0 text-center">
+                <Avatar className="h-16 w-16 border-2 border-primary">
+                    <AvatarImage src={story.user?.profilePictureUrl} />
+                    <AvatarFallback>{story.user?.username?.charAt(0) ?? '?'}</AvatarFallback>
+                </Avatar>
+                <p className="mt-2 text-xs font-medium text-foreground truncate w-16">{story.user?.username}</p>
+            </div>
+        ))}
       </div>
-    </div>
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   );
 }
 
@@ -112,7 +177,7 @@ export default function Home() {
     <div className="container mx-auto max-w-2xl px-4 py-8">
       <div className="space-y-8">
         <section aria-labelledby="stories-heading">
-          <h2 id="stories-heading" className="sr-only">
+          <h2 id="stories-heading" className="text-lg font-semibold tracking-tight">
             Stories
           </h2>
           <Stories />
