@@ -10,7 +10,7 @@ import { PostCard } from '@/components/post-card';
 import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, limit, serverTimestamp, doc, where, Timestamp, getDocs, QuerySnapshot, DocumentData } from 'firebase/firestore';
+import { collection, query, orderBy, limit, serverTimestamp, doc, where, Timestamp, getDocs } from 'firebase/firestore';
 import type { Post, Story } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -18,55 +18,19 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 function Stories() {
   const { firestore } = useFirebase();
-  const [allStories, setAllStories] = useState<Story[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Note: This fetches stories from ALL users. In a real-world scenario with many users,
-  // you'd likely fetch stories only from friends or a curated list of users.
-  // This approach is for demonstration purposes.
-  useEffect(() => {
-    if (!firestore) return;
-
-    const fetchAllUserStories = async () => {
-        setIsLoading(true);
-        const twentyFourHoursAgo = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
-        try {
-            // This is not efficient at scale. A better approach would be a single top-level 'stories' collection.
-            // But for this prototype, we'll fetch from each user.
-            const usersSnapshot = await getDocs(collection(firestore, 'users'));
-            const storyPromises: Promise<QuerySnapshot<DocumentData>>[] = [];
-            
-            usersSnapshot.forEach(userDoc => {
-                const storiesQuery = query(
-                    collection(firestore, `users/${userDoc.id}/stories`),
-                    where('timestamp', '>', twentyFourHoursAgo),
-                    orderBy('timestamp', 'desc')
-                );
-                storyPromises.push(getDocs(storiesQuery));
-            });
-
-            const allStorySnapshots = await Promise.all(storyPromises);
-            const fetchedStories: Story[] = [];
-            allStorySnapshots.forEach(storySnapshot => {
-                storySnapshot.forEach(doc => {
-                    // The user data is denormalized on the story document itself.
-                    fetchedStories.push({ id: doc.id, ...doc.data() } as Story);
-                });
-            });
-
-            fetchedStories.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
-            
-            setAllStories(fetchedStories);
-        } catch (error) {
-            console.error("Error fetching stories: ", error);
-        } finally {
-            setIsLoading(false);
-        }
-    }
-    
-    fetchAllUserStories();
-
+  
+  const storiesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const twentyFourHoursAgo = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+    return query(
+        collection(firestore, 'stories'), 
+        where('timestamp', '>', twentyFourHoursAgo),
+        orderBy('timestamp', 'desc'),
+        limit(20)
+    );
   }, [firestore]);
+
+  const { data: allStories, isLoading } = useCollection<Story>(storiesQuery);
 
   return (
     <ScrollArea className="w-full whitespace-nowrap">
@@ -89,7 +53,7 @@ function Stories() {
             </div>
         ))}
 
-        {!isLoading && allStories.map(story => (
+        {!isLoading && allStories && allStories.map(story => (
             <div key={story.id} className="flex-shrink-0 text-center">
                 <Avatar className="h-16 w-16 border-2 border-primary">
                     <AvatarImage src={story.user?.profilePictureUrl} />

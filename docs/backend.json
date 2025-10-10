@@ -197,17 +197,29 @@
           "description": "URL of the media (image/video) in the story.",
           "format": "uri"
         },
+        "text": {
+            "type": "string",
+            "description": "Text content of the story."
+        },
         "timestamp": {
           "type": "string",
           "description": "Timestamp of when the story was created.",
           "format": "date-time"
+        },
+        "user": {
+          "type": "object",
+          "description": "Denormalized user data for quick display.",
+          "properties": {
+            "username": { "type": "string" },
+            "profilePictureUrl": { "type": "string" }
+          }
         }
       },
       "required": [
         "id",
         "userId",
-        "mediaUrl",
-        "timestamp"
+        "timestamp",
+        "user"
       ]
     },
     "Interest": {
@@ -350,18 +362,14 @@
         }
       },
       {
-        "path": "/users/{userId}/stories/{storyId}",
+        "path": "/stories/{storyId}",
         "definition": {
           "entityName": "Story",
           "schema": {
             "$ref": "#/backend/entities/Story"
           },
-          "description": "Stores user stories. Path-based ownership ensures secure access control.",
+          "description": "Top-level collection for all user stories. Publicly readable.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
             {
               "name": "storyId",
               "description": "The unique identifier for the story."

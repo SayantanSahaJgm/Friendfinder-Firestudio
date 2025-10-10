@@ -39,7 +39,7 @@ export default function AddPostPage() {
 
     setIsLoading(type);
 
-    const collectionName = type === 'post' ? 'posts' : `users/${currentUser.uid}/stories`;
+    const collectionName = type === 'post' ? 'posts' : 'stories';
     const targetCollection = collection(firestore, collectionName);
     
     const data = {
