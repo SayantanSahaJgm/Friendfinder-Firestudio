@@ -1,9 +1,73 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { ImagePlus, Send } from "lucide-react";
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { ImagePlus, Send, Loader2 } from 'lucide-react';
+import { useAuth, useFirebase } from '@/firebase';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, serverTimestamp } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AddPostPage() {
+  const [postContent, setPostContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { firestore } = useFirebase();
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handlePublish = async () => {
+    if (!auth.currentUser || !firestore) {
+      toast({
+        title: 'Authentication Error',
+        description: 'You must be logged in to create a post.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (postContent.trim().length < 1) {
+        toast({
+            title: 'Empty Post',
+            description: 'You cannot publish an empty post.',
+            variant: 'destructive',
+        });
+        return;
+    }
+
+
+    setIsLoading(true);
+
+    const postsCollection = collection(firestore, `users/${auth.currentUser.uid}/posts`);
+    
+    try {
+        await addDocumentNonBlocking(postsCollection, {
+        text: postContent,
+        userId: auth.currentUser.uid,
+        timestamp: serverTimestamp(),
+        likeIds: [],
+        commentIds: [],
+      });
+
+      toast({
+        title: 'Post Published!',
+        description: 'Your post is now live.',
+      });
+      router.push('/');
+    } catch (error) {
+        console.error("Error publishing post", error);
+        toast({
+            title: 'Error',
+            description: 'There was an error publishing your post. Please try again.',
+            variant: 'destructive',
+          });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
       <Card>
@@ -15,14 +79,25 @@ export default function AddPostPage() {
           <Textarea
             placeholder="Start writing your post here..."
             className="min-h-[150px] resize-none"
+            value={postContent}
+            onChange={(e) => setPostContent(e.target.value)}
+            disabled={isLoading}
           />
-          <Button variant="outline" className="w-full">
+          <Button variant="outline" className="w-full" disabled={isLoading}>
             <ImagePlus className="mr-2 h-4 w-4" /> Add Photo or Video
           </Button>
         </CardContent>
         <CardFooter>
-          <Button className="w-full" size="lg">
-            <Send className="mr-2 h-4 w-4" /> Publish Post
+          <Button className="w-full" size="lg" onClick={handlePublish} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Publishing...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" /> Publish Post
+              </>
+            )}
           </Button>
         </CardFooter>
       </Card>

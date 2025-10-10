@@ -1,41 +1,44 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { Post } from "@/lib/types";
+import type { Post, User } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, MoreHorizontal, Share2 } from "lucide-react";
+import { formatDistanceToNow } from 'date-fns';
 
 type PostCardProps = {
-  post: Post;
+  post: Post & { user: User };
 };
 
 export function PostCard({ post }: PostCardProps) {
+  const timeAgo = post.timestamp ? formatDistanceToNow(post.timestamp.toDate(), { addSuffix: true }) : 'just now';
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center gap-4 p-4">
         <Link href={`/profile`}>
           <Avatar>
-            <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
-            <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={post.user.profilePictureUrl} alt={post.user.username} />
+            <AvatarFallback>{post.user.username?.charAt(0)}</AvatarFallback>
           </Avatar>
         </Link>
         <div className="flex-1">
           <Link href={`/profile`} className="font-semibold hover:underline">
-            {post.user.name}
+            {post.user.username}
           </Link>
-          <p className="text-xs text-muted-foreground">{post.timestamp}</p>
+          <p className="text-xs text-muted-foreground">{timeAgo}</p>
         </div>
         <Button variant="ghost" size="icon">
           <MoreHorizontal className="h-5 w-5" />
         </Button>
       </CardHeader>
       <CardContent className="space-y-4 p-4 pt-0">
-        <p className="text-sm">{post.content}</p>
-        {post.imageUrl && (
+        <p className="text-sm">{post.text}</p>
+        {post.mediaUrl && (
           <div className="relative aspect-[3/2] w-full overflow-hidden rounded-lg">
             <Image
-              src={post.imageUrl}
+              src={post.mediaUrl}
               alt="Post content"
               fill
               className="object-cover"
@@ -48,11 +51,11 @@ export function PostCard({ post }: PostCardProps) {
         <div className="flex space-x-4 text-muted-foreground">
           <Button variant="ghost" size="sm" className="flex items-center gap-2">
             <Heart className="h-5 w-5" />
-            <span>{post.likes}</span>
+            <span>{post.likeIds?.length ?? 0}</span>
           </Button>
           <Button variant="ghost" size="sm" className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5" />
-            <span>{post.commentsCount}</span>
+            <span>{post.commentIds?.length ?? 0}</span>
           </Button>
         </div>
         <Button variant="ghost" size="sm" className="flex items-center gap-2">
