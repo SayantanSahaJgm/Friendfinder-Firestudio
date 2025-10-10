@@ -136,7 +136,7 @@ export default function MapPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col">
+    <div className="h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col bg-white">
       <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
         <Button variant="ghost" size="icon" className="bg-background/50 rounded-full hover:bg-muted">
           <ArrowLeft />
@@ -153,19 +153,6 @@ export default function MapPage() {
       </header>
 
       <div className="flex-grow relative">
-        <Image
-          src="https://picsum.photos/seed/lightmap/1200/1600"
-          fill
-          objectFit="cover"
-          alt="Light map"
-          className="opacity-40"
-          data-ai-hint="light map"
-        />
-        <div className="absolute top-1/2 right-4 flex flex-col gap-4">
-           <Button variant="ghost" size="icon" onClick={requestLocation} className="bg-background/50 rounded-full hover:bg-muted">
-             <LocateFixed />
-           </Button>
-        </div>
         {user && (
             <div className="absolute top-[30%] left-[25%] text-center">
                 <Avatar className="w-12 h-12 border-2 border-blue-400">
