@@ -26,7 +26,7 @@ export type Story = {
   user: {
     username: string;
     profilePictureUrl?: string;
-  }
+  };
 };
 
 export type Post = {

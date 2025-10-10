@@ -18,7 +18,6 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 function Stories() {
   const { firestore } = useFirebase();
-  const { user } = useUser();
   const [allStories, setAllStories] = useState<Story[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -30,35 +29,39 @@ function Stories() {
 
     const fetchAllUserStories = async () => {
         setIsLoading(true);
-        // Fetch all users first
-        const usersSnapshot = await getDocs(collection(firestore, 'users'));
-        const storyPromises: Promise<QuerySnapshot<DocumentData>>[] = [];
-        
-        // For each user, create a query to get their recent stories
-        usersSnapshot.forEach(userDoc => {
-            const twentyFourHoursAgo = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
-            const storiesQuery = query(
-                collection(firestore, `users/${userDoc.id}/stories`),
-                where('timestamp', '>', twentyFourHoursAgo),
-                orderBy('timestamp', 'desc')
-            );
-            storyPromises.push(getDocs(storiesQuery));
-        });
-
-        // Resolve all story queries
-        const allStorySnapshots = await Promise.all(storyPromises);
-        const fetchedStories: Story[] = [];
-        allStorySnapshots.forEach(storySnapshot => {
-            storySnapshot.forEach(doc => {
-                fetchedStories.push({ id: doc.id, ...doc.data() } as Story);
+        const twentyFourHoursAgo = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+        try {
+            // This is not efficient at scale. A better approach would be a single top-level 'stories' collection.
+            // But for this prototype, we'll fetch from each user.
+            const usersSnapshot = await getDocs(collection(firestore, 'users'));
+            const storyPromises: Promise<QuerySnapshot<DocumentData>>[] = [];
+            
+            usersSnapshot.forEach(userDoc => {
+                const storiesQuery = query(
+                    collection(firestore, `users/${userDoc.id}/stories`),
+                    where('timestamp', '>', twentyFourHoursAgo),
+                    orderBy('timestamp', 'desc')
+                );
+                storyPromises.push(getDocs(storiesQuery));
             });
-        });
 
-        // Sort all stories by timestamp
-        fetchedStories.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
-        
-        setAllStories(fetchedStories);
-        setIsLoading(false);
+            const allStorySnapshots = await Promise.all(storyPromises);
+            const fetchedStories: Story[] = [];
+            allStorySnapshots.forEach(storySnapshot => {
+                storySnapshot.forEach(doc => {
+                    // The user data is denormalized on the story document itself.
+                    fetchedStories.push({ id: doc.id, ...doc.data() } as Story);
+                });
+            });
+
+            fetchedStories.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+            
+            setAllStories(fetchedStories);
+        } catch (error) {
+            console.error("Error fetching stories: ", error);
+        } finally {
+            setIsLoading(false);
+        }
     }
     
     fetchAllUserStories();
