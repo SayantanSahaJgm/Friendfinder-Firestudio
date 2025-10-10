@@ -10,7 +10,7 @@ import { PostCard } from '@/components/post-card';
 import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, limit, serverTimestamp, doc, where, Timestamp, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, serverTimestamp, doc } from 'firebase/firestore';
 import type { Post, Story } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -21,10 +21,10 @@ function Stories() {
   
   const storiesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const twentyFourHoursAgo = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+    // Simplified query: Order by timestamp and get the latest 20.
+    // The previous query with where() and orderBy() on the same field was invalid.
     return query(
         collection(firestore, 'stories'), 
-        where('timestamp', '>', twentyFourHoursAgo),
         orderBy('timestamp', 'desc'),
         limit(20)
     );
