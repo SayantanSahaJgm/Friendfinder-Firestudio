@@ -8,9 +8,9 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", icon: Home, label: "Home"},
   { href: "/map", icon: Map, label: "Map" },
-  { href: "/nearby", icon: Users, label: "Online" },
-  { href: "/add-post", icon: PlusSquare, label: "Add Post", isCentral: true },
   { href: "/bluetooth", icon: Bluetooth, label: "Bluetooth" },
+  { href: "/add-post", icon: PlusSquare, label: "Add Post", isCentral: true },
+  { href: "/nearby", icon: Users, label: "Online" },
   { href: "/random-chat", icon: Users, label: "Chat" },
   { href: "/friends", icon: Heart, label: "Friends" },
 ];
