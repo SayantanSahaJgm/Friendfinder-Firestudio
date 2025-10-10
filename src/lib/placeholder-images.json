@@ -1,3 +1,70 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "avatar-1",
+      "description": "User avatar 1",
+      "imageUrl": "https://picsum.photos/seed/avatar1/200/200",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "avatar-2",
+      "description": "User avatar 2",
+      "imageUrl": "https://picsum.photos/seed/avatar2/200/200",
+      "imageHint": "person smiling"
+    },
+    {
+      "id": "avatar-3",
+      "description": "User avatar 3",
+      "imageUrl": "https://picsum.photos/seed/avatar3/200/200",
+      "imageHint": "woman portrait"
+    },
+    {
+      "id": "avatar-4",
+      "description": "User avatar 4",
+      "imageUrl": "https://picsum.photos/seed/avatar4/200/200",
+      "imageHint": "man glasses"
+    },
+    {
+      "id": "avatar-5",
+      "description": "User avatar 5",
+      "imageUrl": "https://picsum.photos/seed/avatar5/200/200",
+      "imageHint": "person happy"
+    },
+    {
+      "id": "avatar-6",
+      "description": "User avatar 6",
+      "imageUrl": "https://picsum.photos/seed/avatar6/200/200",
+      "imageHint": "woman smiling"
+    },
+    {
+      "id": "avatar-current",
+      "description": "Current user avatar",
+      "imageUrl": "https://picsum.photos/seed/currentuser/200/200",
+      "imageHint": "person looking"
+    },
+    {
+      "id": "post-1",
+      "description": "Post image 1",
+      "imageUrl": "https://picsum.photos/seed/post1/600/400",
+      "imageHint": "city sunset"
+    },
+    {
+      "id": "post-2",
+      "description": "Post image 2",
+      "imageUrl": "https://picsum.photos/seed/post2/600/400",
+      "imageHint": "nature forest"
+    },
+    {
+      "id": "post-3",
+      "description": "Post image 3",
+      "imageUrl": "https://picsum.photos/seed/post3/600/400",
+      "imageHint": "food delicious"
+    },
+    {
+      "id": "map-placeholder",
+      "description": "Map placeholder image",
+      "imageUrl": "https://picsum.photos/seed/map/1200/800",
+      "imageHint": "map city"
+    }
+  ]
 }
