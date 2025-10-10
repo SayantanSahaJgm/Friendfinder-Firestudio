@@ -16,7 +16,7 @@ import {
   MapPinOff,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirebase } from '@/firebase';
+import { useUser, useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, serverTimestamp, getDocs, collection, query, where, Timestamp, limit } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { User } from '@/lib/types';
@@ -40,31 +40,36 @@ export default function MapPage() {
     if (!firestore || !user) return;
     setIsLoading(true);
 
-    try {
-        const oneHourAgo = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
-        const usersQuery = query(
-            collection(firestore, 'users'), 
-            where('locationEnabled', '==', true),
-            where('lastLogin', '>', oneHourAgo),
-            limit(50)
-        );
+    const oneHourAgo = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
+    const usersQuery = query(
+        collection(firestore, 'users'), 
+        where('locationEnabled', '==', true),
+        where('lastLogin', '>', oneHourAgo),
+        limit(50)
+    );
 
-        const querySnapshot = await getDocs(usersQuery);
+    getDocs(usersQuery).then(querySnapshot => {
         const fetchedUsers = querySnapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as User))
             .filter(u => u.id !== user.uid);
         
         setAllUsers(fetchedUsers);
-    } catch (error) {
-        console.error("Error fetching nearby users:", error);
+        setIsLoading(false);
+    }).catch(serverError => {
+        const permissionError = new FirestorePermissionError({
+            path: 'users',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+
         toast({
             title: "Error",
             description: "Could not fetch nearby users. Please check your connection and security rules.",
             variant: "destructive",
-        })
-    } finally {
+        });
         setIsLoading(false);
-    }
+    });
+
   }, [firestore, user, toast]);
 
   const requestLocation = useCallback(() => {
