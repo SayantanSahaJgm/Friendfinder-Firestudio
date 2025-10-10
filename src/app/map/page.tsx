@@ -13,6 +13,7 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  MapPinOff,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirebase } from '@/firebase';
@@ -31,7 +32,8 @@ export default function MapPage() {
   } | null>(null);
   const [isSharing, setIsSharing] = useState(true);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Combined loading state
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [distance, setDistance] = useState(50); // Default distance in km
 
   const fetchNearbyUsers = useCallback(async () => {
@@ -44,7 +46,7 @@ export default function MapPage() {
             collection(firestore, 'users'), 
             where('locationEnabled', '==', true),
             where('lastLogin', '>', oneHourAgo),
-            limit(50) // Fetch more users to allow for client-side filtering
+            limit(50)
         );
 
         const querySnapshot = await getDocs(usersQuery);
@@ -66,11 +68,21 @@ export default function MapPage() {
   }, [firestore, user, toast]);
 
   const requestLocation = useCallback(() => {
+    // Prevent re-fetching if location is already set or an error occurred
+    if (location || locationError) {
+        setIsLoading(false);
+        return
+    };
+
+    setIsLoading(true);
+    setLocationError(null);
+
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setLocation({ latitude, longitude });
+          setLocationError(null);
 
           if (user && firestore) {
             const userRef = doc(firestore, 'users', user.uid);
@@ -88,22 +100,30 @@ export default function MapPage() {
         },
         (error) => {
           console.error('Geolocation error:', error);
+          let description = 'Could not get your location. Please enable location services.';
+          if (error.code === error.PERMISSION_DENIED) {
+            description = 'Location access was denied. Please enable it in your browser settings to use the map.';
+          }
+          setLocationError(description);
           toast({
             variant: 'destructive',
             title: 'Location Error',
-            description:
-              'Could not get your location. Please enable location services.',
+            description,
           });
+          setIsLoading(false);
         }
       );
     } else {
+      const errorMsg = 'Your browser does not support geolocation.';
+      setLocationError(errorMsg);
       toast({
         variant: 'destructive',
         title: 'Unsupported Browser',
-        description: 'Your browser does not support geolocation.',
+        description: errorMsg,
       });
+      setIsLoading(false);
     }
-  }, [user, firestore, fetchNearbyUsers, toast]);
+  }, [user, firestore, fetchNearbyUsers, toast, location, locationError]);
 
   useEffect(() => {
     requestLocation();
@@ -156,7 +176,7 @@ export default function MapPage() {
       </header>
 
       <div className="flex-grow relative">
-        {user && (
+        {user && location && (
             <div className="absolute top-[30%] left-[25%] text-center">
                 <Avatar className="w-12 h-12 border-2 border-blue-400">
                     <AvatarImage src={user?.photoURL ?? `https://picsum.photos/seed/${user?.uid}/200/200`} />
@@ -186,7 +206,7 @@ export default function MapPage() {
       <div className="absolute bottom-0 left-0 right-0 h-[40vh] bg-background/80 backdrop-blur-sm rounded-t-2xl p-4 border-t flex flex-col">
         <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
         <h2 className="text-center text-lg font-semibold mb-4">People Nearby</h2>
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 flex flex-col">
           <div className='flex items-center gap-4'>
               <label htmlFor="distance-slider" className='text-sm font-medium text-muted-foreground whitespace-nowrap'>Distance: {distance} km</label>
               <Slider
@@ -196,12 +216,26 @@ export default function MapPage() {
                   step={1}
                   value={[distance]}
                   onValueChange={(value) => setDistance(value[0])}
+                  disabled={!!locationError || isLoading}
               />
           </div>
           <div className="space-y-4 overflow-y-auto flex-1">
-              {isLoading && <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8" /></div>}
-              {!isLoading && nearbyUsers.length === 0 && <p className="text-center text-muted-foreground pt-4">No users found within {distance}km. Try expanding your search radius!</p>}
-              {!isLoading && nearbyUsers.map(nearbyUser => (
+              {isLoading && (
+                <div className="flex justify-center items-center h-full flex-col gap-2">
+                    <Loader2 className="animate-spin h-8 w-8 text-primary" />
+                    <p className="text-muted-foreground">Getting your location...</p>
+                </div>
+              )}
+              {locationError && (
+                <div className="flex justify-center items-center h-full flex-col gap-2 text-center">
+                    <MapPinOff className="h-10 w-10 text-destructive"/>
+                    <p className="text-destructive font-semibold">Location Unavailable</p>
+                    <p className="text-muted-foreground max-w-xs">{locationError}</p>
+                    <Button onClick={requestLocation} className="mt-4">Try Again</Button>
+                </div>
+              )}
+              {!isLoading && !locationError && nearbyUsers.length === 0 && <p className="text-center text-muted-foreground pt-4">No users found within {distance}km. Try expanding your search radius!</p>}
+              {!isLoading && !locationError && nearbyUsers.map(nearbyUser => (
                   <div key={nearbyUser.id} className="flex items-center gap-4">
                       <Avatar className="h-14 w-14">
                           <AvatarImage src={nearbyUser.profilePictureUrl} alt={nearbyUser.username} />
