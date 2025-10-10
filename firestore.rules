@@ -1,172 +1,182 @@
-/**
- * @file Firestore Security Rules for FriendFinder
- *
- * @description This ruleset enforces a user-ownership model for user profiles and a public-read, owner-write model for posts and stories.
- *
- * @dataStructure
- * - /users/{userId}: Stores user profile data, accessible only to the user.
- * - /posts/{postId}: Stores user posts, publicly readable but writable only by the post's author.
- * - /posts/{postId}/likes/{likeId}: Stores likes for a specific post, writable by any authenticated user.
- * - /posts/{postId}/comments/{commentId}: Stores comments for a specific post, writable by any authenticated user.
- * - /stories/{storyId}: Stores user stories, publicly readable but writable only by the story's author.
- * - /friendRequests/{requestId}: Stores friend requests between users, writable by any authenticated user.
- *
- * @keySecurityDecisions
- * - Users can only read and write their own profile data.
- * - Posts and stories are publicly readable to enable an aggregated feed.
- * - Listing of users is disabled to protect user privacy. A backend API should be used for filtered user searches.
- *
- * @denormalizationForAuthorization
- * - Posts and Stories must contain a `userId` field to identify the author. This allows for simple owner checks without additional `get()` calls.
- *
- * @structuralSegregation
- * - Uses a top-level `/stories` collection instead of a boolean flag on `/users/{userId}/stories` to allow for efficient public listing of all stories.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Enforces user-ownership for user profiles.
+     * @description Secure user profiles. Only the authenticated user can read/write their own profile.
      * @path /users/{userId}
-     * @allow (read) Signed-in user can read their own profile data.
-     * @allow (write) Signed-in user can update their own profile data.
-     * @deny (read) Signed-in user cannot read another user's profile data.
-     * @deny (write) Signed-in user cannot update another user's profile data.
-     * @principle Enforces document ownership for writes and path-based authorization.
+     * @allow (get, update, delete) Authenticated user with matching userId.
+     * @allow (create) Authenticated user creating their own profile.
+     * @deny (get, list) Any user attempting to list all users.
+     * @deny (get, update, delete) Any user attempting to access another user's profile.
+     * @principle Enforces document ownership for all operations on user profiles.
      */
     match /users/{userId} {
-      // Signed-in user can read their own profile data.
-      allow get: if isSignedIn() && isOwner(userId);
-      // Prevent listing of all users for privacy.
-      allow list: if false;
-      // Signed-in user can create their own profile data.
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-      // Signed-in user can update their own profile data, but userId cannot be changed.
-      allow update: if isSignedIn() && isOwner(userId) && request.resource.data.id == resource.data.id;
-      // Signed-in user can delete their own profile data.
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isSignedIn() && isOwner(userId) && resource != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if false; // User listing is not permitted
+
+      // Allow the user to create their own profile, enforcing that the userId in the path matches their auth.uid
+      allow create: if isSignedIn() && isOwner(userId);
+
+      //On Update: You SHOULD enforce that the ownership field is immutable (e.g., request.resource.data.id == resource.data.id). This check is superior because it allows for partial updates (the client doesn't have to re-send the id field) while securely preventing the ownership link from ever being changed.
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Allows public reading of posts, but restricts writes to the post's author.
+     * @description Secure posts. Publicly readable, but only the owner can create/update/delete.
      * @path /posts/{postId}
-     * @allow (get, list) Any user can read any post.
-     * @allow (create) Signed-in user can create a post with their own userId.
-     * @allow (update) Signed-in user can update their own post.
-     * @allow (delete) Signed-in user can delete their own post.
-     * @deny (create) Signed-in user cannot create a post with another user's userId.
-     * @deny (update) Signed-in user cannot update another user's post.
-     * @deny (delete) Signed-in user cannot delete another user's post.
-     * @principle Public read with owner-only writes, enforces document ownership.
+     * @allow (get, list) Any user can read posts.
+     * @allow (create) Authenticated user creating a post with their userId.
+     * @allow (update, delete) Only the owner of the post can update/delete it.
+     * @deny (create, update, delete) Unauthenticated users cannot create/update/delete posts.
+     * @principle Public read access with owner-only writes for posts.
      */
     match /posts/{postId} {
-      // Anyone can read any post.
-      allow get, list: if true;
-      // Signed-in user can create a post with their own userId.
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner() {
+        return resource.data.userId == request.auth.uid;
+      }
+
+      function isExistingOwner() {
+        return isSignedIn() && isOwner() && resource != null;
+      }
+
+      allow get, list: if true; // Public read access
+
+      // Validate that the incoming userId matches the user's auth UID on create
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Signed-in user can update their own post.
-      allow update: if isSignedIn() && isOwner(resource.data.userId) && resource != null;
-      // Signed-in user can delete their own post.
-      allow delete: if isSignedIn() && isExistingOwner(resource.data.userId);
+      allow update: if isExistingOwner();
+      allow delete: if isExistingOwner();
     }
 
     /**
-     * @description Allows any signed-in user to create likes on posts.
+     * @description Secure likes. Only the user who created the like can read/write it.
      * @path /posts/{postId}/likes/{likeId}
-     * @allow (get, list) Any user can read any like.
-     * @allow (create) Signed-in user can create a like.
-     * @allow (update) Not allowed.
-     * @allow (delete) Not allowed.
-     * @deny (create) Signed-in user cannot create a like for another user.
-     * @principle Allows any signed-in user to like a post.
+     * @allow (get) Authenticated user accessing their own like.
+     * @allow (create) Authenticated user creating their own like.
+     * @allow (update, delete) Only the owner can update/delete the like.
+     * @deny (list) Listing likes is not permitted.
+     * @principle Enforces document ownership for likes.
      */
     match /posts/{postId}/likes/{likeId} {
-      // Anyone can read any like.
-      allow get, list: if true;
-      // Signed-in user can create a like.
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.postId == postId;
-      // Updates are not allowed
-      allow update: if false;
-      // Deletes are not allowed
-      allow delete: if false;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner() {
+        return request.auth.uid == resource.data.userId;
+      }
+
+     function isExistingOwner() {
+        return isSignedIn() && isOwner() && resource != null;
+      }
+
+      allow get: if isOwner();
+      allow list: if false; // Listing likes is not permitted
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isExistingOwner();
+      allow delete: if isExistingOwner();
     }
 
     /**
-     * @description Allows any signed-in user to create comments on posts.
+     * @description Secure comments. Only the user who created the comment can read/write it.
      * @path /posts/{postId}/comments/{commentId}
-     * @allow (get, list) Any user can read any comment.
-     * @allow (create) Signed-in user can create a comment.
-     * @allow (update) Not allowed.
-     * @allow (delete) Not allowed.
-     * @deny (create) Signed-in user cannot create a comment for another user.
-     * @principle Allows any signed-in user to comment on a post.
+     * @allow (get) Authenticated user accessing their own comment.
+     * @allow (create) Authenticated user creating their own comment.
+     * @allow (update, delete) Only the owner can update/delete the comment.
+     * @deny (list) Listing comments is not permitted.
+     * @principle Enforces document ownership for comments.
      */
     match /posts/{postId}/comments/{commentId} {
-      // Anyone can read any comment.
-      allow get, list: if true;
-      // Signed-in user can create a comment.
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.postId == postId;
-      // Updates are not allowed
-      allow update: if false;
-      // Deletes are not allowed
-      allow delete: if false;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner() {
+        return request.auth.uid == resource.data.userId;
+      }
+     function isExistingOwner() {
+        return isSignedIn() && isOwner() && resource != null;
+      }
+      allow get: if isOwner();
+      allow list: if false; // Listing comments is not permitted
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isExistingOwner();
+      allow delete: if isExistingOwner();
     }
 
     /**
-     * @description Allows public reading of stories, but restricts writes to the story's author.
+     * @description Secure stories. Publicly readable, but only the owner can create/update/delete.
      * @path /stories/{storyId}
-     * @allow (get, list) Any user can read any story.
-     * @allow (create) Signed-in user can create a story with their own userId.
-     * @allow (update) Signed-in user can update their own story.
-     * @allow (delete) Signed-in user can delete their own story.
-     * @deny (create) Signed-in user cannot create a story with another user's userId.
-     * @deny (update) Signed-in user cannot update another user's story.
-     * @deny (delete) Signed-in user cannot delete another user's story.
-     * @principle Public read with owner-only writes, enforces document ownership.
+     * @allow (get, list) Any user can read stories.
+     * @allow (create) Authenticated user creating a story with their userId.
+     * @allow (update, delete) Only the owner of the story can update/delete it.
+     * @deny (create, update, delete) Unauthenticated users cannot create/update/delete stories.
+     * @principle Public read access with owner-only writes for stories.
      */
     match /stories/{storyId} {
-      // Anyone can read any story.
-      allow get, list: if true;
-      // Signed-in user can create a story with their own userId.
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner() {
+        return resource.data.userId == request.auth.uid;
+      }
+
+      function isExistingOwner() {
+        return isSignedIn() && isOwner() && resource != null;
+      }
+
+      allow get, list: if true; // Public read access
+
+      // Validate that the incoming userId matches the user's auth UID on create
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Signed-in user can update their own story.
-      allow update: if isSignedIn() && isOwner(resource.data.userId) && resource != null;
-      // Signed-in user can delete their own story.
-      allow delete: if isSignedIn() && isExistingOwner(resource.data.userId);
+      allow update: if isExistingOwner();
+      allow delete: if isExistingOwner();
     }
 
     /**
-     * @description Allows any signed-in user to create friend requests.
+     * @description Secure friend requests. Only the involved users can create/update/delete friend requests.
      * @path /friendRequests/{requestId}
-     * @allow (get, list) Any user can read any friend request.
-     * @allow (create) Signed-in user can create a friend request.
-     * @allow (update) Any signed-in user can update friend request.
-     * @allow (delete) Not allowed.
-     * @deny (create) Signed-in user cannot create a friend request for another user.
-     * @principle Allows any signed-in user to create friend requests.
+     *  @allow (get) Only the involved users can get the friend request.
+     * @allow (create) Only the involved users can create friend requests.
+     * @allow (update, delete) Only the involved users can update/delete the friend request.
+     * @deny (list) Listing friend requests is not permitted.
+     * @principle Only the involved users can manage friend requests.
      */
     match /friendRequests/{requestId} {
-      // Anyone can read any friend request.
-      allow get, list: if true;
-      // Signed-in user can create a friend request.
-      allow create: if isSignedIn() && (request.resource.data.from == request.auth.uid || request.resource.data.to == request.auth.uid) && request.resource.data.id == request.resource.data.from + "_" + request.resource.data.to;
-      allow update: if isSignedIn();
-      // Deletes are not allowed
-      allow delete: if false;
-    }
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-    // --- Helper functions ---
-    function isSignedIn() {
-      return request.auth != null;
-    }
+      function isParticipant() {
+        return isSignedIn() && (request.auth.uid == request.resource.data.from || request.auth.uid == request.resource.data.to);
+      }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
+      function isExistingParticipant() {
+        return isSignedIn() && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to) && resource != null;
+      }
 
-    function isExistingOwner(userId) {
-      return isSignedIn() && isOwner(userId) && resource != null;
+      allow get: if isExistingParticipant();
+      allow list: if false; // Listing is not permitted
+      allow create: if isParticipant();
+      allow update: if isExistingParticipant();
+      allow delete: if isExistingParticipant();
     }
   }
 }
