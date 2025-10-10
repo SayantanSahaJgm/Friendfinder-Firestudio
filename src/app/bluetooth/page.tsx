@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,7 +51,6 @@ export default function BluetoothPage() {
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
-        toast({ title: "Scan Error", description: "Could not fetch nearby users.", variant: "destructive" });
     }).finally(() => {
         setIsScanning(false);
     });

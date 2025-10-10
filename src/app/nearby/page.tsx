@@ -46,11 +46,6 @@ function UserGrid() {
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
-        toast({
-            title: "Error",
-            description: "Could not fetch online users.",
-            variant: "destructive"
-        })
       }).finally(() => {
         setIsLoading(false);
       });

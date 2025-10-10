@@ -52,7 +52,6 @@ export default function WifiPage() {
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
-        toast({ title: "Scan Error", description: "Could not fetch nearby users.", variant: "destructive" });
     }).finally(() => {
         setIsScanning(false);
     });
