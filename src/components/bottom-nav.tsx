@@ -10,7 +10,7 @@ const navItems = [
   { href: "/map", icon: Map, label: "Map" },
   { href: "/bluetooth", icon: Bluetooth, label: "Bluetooth" },
   { href: "/add-post", icon: PlusSquare, label: "Add Post", isCentral: true },
-  { href: "/nearby", icon: Wifi, label: "Online" },
+  { href: "/wifi", icon: Wifi, label: "WiFi" },
   { href: "/random-chat", icon: Users, label: "Chat" },
   { href: "/friends", icon: Heart, label: "Friends" },
 ];
