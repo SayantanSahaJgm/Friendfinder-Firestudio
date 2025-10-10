@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
 import {
   ArrowLeft,
   Heart,
@@ -26,7 +27,7 @@ import { useUser, useFirebase } from '@/firebase';
 import { doc, serverTimestamp, getDocs, collection, query, where, Timestamp, limit } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { User } from '@/lib/types';
-
+import haversine from 'haversine-distance';
 
 export default function MapPage() {
   const { toast } = useToast();
@@ -37,8 +38,9 @@ export default function MapPage() {
     longitude: number;
   } | null>(null);
   const [isSharing, setIsSharing] = useState(true);
-  const [nearbyUsers, setNearbyUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [distance, setDistance] = useState(50); // Default distance in km
 
   const fetchNearbyUsers = useCallback(async () => {
     if (!firestore || !user) return;
@@ -50,7 +52,7 @@ export default function MapPage() {
             collection(firestore, 'users'), 
             where('locationEnabled', '==', true),
             where('lastLogin', '>', oneHourAgo),
-            limit(10)
+            limit(50) // Fetch more users to allow for client-side filtering
         );
 
         const querySnapshot = await getDocs(usersQuery);
@@ -58,7 +60,7 @@ export default function MapPage() {
             .map(doc => ({ id: doc.id, ...doc.data() } as User))
             .filter(u => u.id !== user.uid);
         
-        setNearbyUsers(fetchedUsers);
+        setAllUsers(fetchedUsers);
     } catch (error) {
         console.error("Error fetching nearby users:", error);
         toast({
@@ -77,10 +79,6 @@ export default function MapPage() {
         (position) => {
           const { latitude, longitude } = position.coords;
           setLocation({ latitude, longitude });
-          toast({
-            title: 'Location Updated',
-            description: 'Your current location has been fetched.',
-          });
 
           if (user && firestore) {
             const userRef = doc(firestore, 'users', user.uid);
@@ -89,7 +87,7 @@ export default function MapPage() {
               {
                 location: { latitude, longitude },
                 lastLogin: serverTimestamp(),
-                locationEnabled: isSharing,
+                locationEnabled: true,
               },
               { merge: true }
             );
@@ -113,11 +111,24 @@ export default function MapPage() {
         description: 'Your browser does not support geolocation.',
       });
     }
-  }, [user, firestore, isSharing, fetchNearbyUsers, toast]);
+  }, [user, firestore, fetchNearbyUsers, toast]);
 
   useEffect(() => {
     requestLocation();
   }, [requestLocation]);
+
+  const nearbyUsers = useMemo(() => {
+    if (!location) return [];
+    return allUsers.filter(u => {
+        if (!u.location) return false;
+        const userLocation = { lat: u.location.latitude, lon: u.location.longitude };
+        const myLocation = { lat: location.latitude, lon: location.longitude };
+        const distMeters = haversine(userLocation, myLocation);
+        const distKm = distMeters / 1000;
+        return distKm <= distance;
+    });
+  }, [allUsers, location, distance]);
+
 
   const toggleSharing = () => {
     const newSharingStatus = !isSharing;
@@ -188,10 +199,7 @@ export default function MapPage() {
                  <div className="relative">
                     <Input placeholder="Search for friends..." className="bg-muted border-none h-12 pl-10" />
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
-                    <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                        <SlidersHorizontal />
-                    </Button>
-                </div>
+                 </div>
             </div>
           </div>
         </SheetTrigger>
@@ -201,9 +209,20 @@ export default function MapPage() {
             <SheetTitle className="text-center text-lg">People Nearby</SheetTitle>
           </SheetHeader>
           <div className="p-4 space-y-4">
-            <div className="space-y-4 overflow-y-auto max-h-[calc(80vh-10rem)]">
+            <div className='flex items-center gap-4'>
+                <label htmlFor="distance-slider" className='text-sm font-medium text-muted-foreground whitespace-nowrap'>Distance: {distance} km</label>
+                <Slider
+                    id="distance-slider"
+                    min={1}
+                    max={100}
+                    step={1}
+                    value={[distance]}
+                    onValueChange={(value) => setDistance(value[0])}
+                />
+            </div>
+            <div className="space-y-4 overflow-y-auto max-h-[calc(80vh-14rem)]">
                 {isLoading && <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8" /></div>}
-                {!isLoading && nearbyUsers.length === 0 && <p className="text-center text-muted-foreground">No users found nearby. Make sure your location sharing is on!</p>}
+                {!isLoading && nearbyUsers.length === 0 && <p className="text-center text-muted-foreground">No users found within {distance}km. Try expanding your search radius!</p>}
                 {!isLoading && nearbyUsers.map(nearbyUser => (
                     <div key={nearbyUser.id} className="flex items-center gap-4">
                         <Avatar className="h-14 w-14">
