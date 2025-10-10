@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Bell, Loader2, LogOut, MessageSquare } from "lucide-react";
+import { Bell, Loader2, LogOut, MessageSquare, LogIn } from "lucide-react";
 import { useAuth, useUser } from "@/firebase";
 
 export default function AppHeader() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const isAnonymous = user?.isAnonymous;
 
   const handleSignOut = () => {
     if (auth) {
@@ -41,10 +42,18 @@ export default function AppHeader() {
             <Bell className="h-5 w-5" />
             <span className="sr-only">Notifications</span>
           </Button>
-          {user && (
+          {user && !isAnonymous && (
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
               <LogOut className="h-5 w-5" />
               <span className="sr-only">Sign Out</span>
+            </Button>
+          )}
+          {isAnonymous && (
+            <Button variant="ghost" size="icon" asChild>
+                <Link href="/login">
+                    <LogIn className="h-5 w-5" />
+                    <span className="sr-only">Login</span>
+                </Link>
             </Button>
           )}
         </div>

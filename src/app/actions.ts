@@ -62,3 +62,43 @@ export async function getSuggestions() {
     return { suggestedConnections: [] };
   }
 }
+
+export async function signup(username: string, email: string, password: string):Promise<{success: boolean, error?: string}> {
+  try {
+    const admin = await getFirebaseAdmin();
+    const userRecord = await admin.auth().createUser({
+      email,
+      password,
+      displayName: username,
+    });
+
+    await admin.firestore().collection('users').doc(userRecord.uid).set({
+      id: userRecord.uid,
+      username: username,
+      email: email,
+      bio: 'Just joined Proximity!',
+      profilePictureUrl: `https://picsum.photos/seed/${userRecord.uid}/200/200`,
+      lastLogin: firestore.FieldValue.serverTimestamp(),
+      locationEnabled: false,
+      interests: [],
+      friends: [],
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function login(session: string): Promise<{success: boolean, error?: string}> {
+    try {
+        const admin = await getFirebaseAdmin();
+        const decodedClaims = await admin.auth().verifySessionCookie(session, true);
+        
+        // You can use decodedClaims.uid to perform additional actions if needed
+        
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: 'Invalid session cookie. Please sign in again.' };
+    }
+}
