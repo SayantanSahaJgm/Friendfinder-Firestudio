@@ -9,6 +9,10 @@ export type User = {
   locationEnabled?: boolean;
   lastLogin?: Timestamp;
   interests?: string[];
+  location?: {
+    latitude: number;
+    longitude: number;
+  }
 };
 
 export type Story = {
@@ -36,3 +40,11 @@ export type Post = {
     profilePictureUrl?: string;
   }
 };
+
+export type NearbyUser = {
+    id: string;
+    username: string;
+    profilePictureUrl: string;
+    distance: string;
+    locationName: string;
+}

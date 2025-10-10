@@ -36,6 +36,14 @@
           "type": "string",
           "description": "Timestamp of the user's last login.",
           "format": "date-time"
+        },
+        "location": {
+            "type": "object",
+            "description": "User's last known location.",
+            "properties": {
+                "latitude": { "type": "number" },
+                "longitude": { "type": "number" }
+            }
         }
       },
       "required": [

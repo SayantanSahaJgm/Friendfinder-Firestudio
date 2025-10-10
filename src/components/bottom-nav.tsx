@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Map, PlusSquare, Shuffle, Users, Search, Bluetooth, Wifi } from "lucide-react";
+import { Home, Map, PlusSquare, Users, Search, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home"},
   { href: "/map", icon: Map, label: "Map" },
-  { href: "/nearby", icon: Users, label: "Nearby" },
+  { href: "/nearby", icon: Users, label: "Online" },
   { href: "/add-post", icon: PlusSquare, label: "Add Post", isCentral: true },
   { href: "/search", icon: Search, label: "Search" },
-  { href: "/random-chat", icon: Shuffle, label: "Shuffle" },
-  { href: "/profile", icon: Users, label: "Profile" },
+  { href: "/random-chat", icon: Users, label: "Chat" },
+  { href: "/friends", icon: Heart, label: "Friends" },
 ];
 
 export default function BottomNav() {
