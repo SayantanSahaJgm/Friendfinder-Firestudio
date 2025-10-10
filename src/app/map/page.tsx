@@ -1,14 +1,8 @@
+
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Image from 'next/image';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -16,11 +10,9 @@ import { Slider } from '@/components/ui/slider';
 import {
   ArrowLeft,
   Heart,
-  LocateFixed,
   Loader2,
   RefreshCw,
   Search,
-  SlidersHorizontal,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirebase } from '@/firebase';
@@ -191,57 +183,42 @@ export default function MapPage() {
         )}
       </div>
 
-      <Sheet>
-        <SheetTrigger asChild>
-          <div className="absolute bottom-0 left-0 right-0 h-48 bg-background/80 backdrop-blur-sm rounded-t-2xl cursor-pointer p-2 border-t">
-            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto" />
-            <div className="p-4">
-                 <div className="relative">
-                    <Input placeholder="Search for friends..." className="bg-muted border-none h-12 pl-10" />
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
-                 </div>
-            </div>
+      <div className="absolute bottom-0 left-0 right-0 h-[40vh] bg-background/80 backdrop-blur-sm rounded-t-2xl p-4 border-t flex flex-col">
+        <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+        <h2 className="text-center text-lg font-semibold mb-4">People Nearby</h2>
+        <div className="space-y-4">
+          <div className='flex items-center gap-4'>
+              <label htmlFor="distance-slider" className='text-sm font-medium text-muted-foreground whitespace-nowrap'>Distance: {distance} km</label>
+              <Slider
+                  id="distance-slider"
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={[distance]}
+                  onValueChange={(value) => setDistance(value[0])}
+              />
           </div>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="bg-background text-foreground border-none rounded-t-2xl h-[80vh]">
-          <SheetHeader>
-            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
-            <SheetTitle className="text-center text-lg">People Nearby</SheetTitle>
-          </SheetHeader>
-          <div className="p-4 space-y-4">
-            <div className='flex items-center gap-4'>
-                <label htmlFor="distance-slider" className='text-sm font-medium text-muted-foreground whitespace-nowrap'>Distance: {distance} km</label>
-                <Slider
-                    id="distance-slider"
-                    min={1}
-                    max={100}
-                    step={1}
-                    value={[distance]}
-                    onValueChange={(value) => setDistance(value[0])}
-                />
-            </div>
-            <div className="space-y-4 overflow-y-auto max-h-[calc(80vh-14rem)]">
-                {isLoading && <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8" /></div>}
-                {!isLoading && nearbyUsers.length === 0 && <p className="text-center text-muted-foreground">No users found within {distance}km. Try expanding your search radius!</p>}
-                {!isLoading && nearbyUsers.map(nearbyUser => (
-                    <div key={nearbyUser.id} className="flex items-center gap-4">
-                        <Avatar className="h-14 w-14">
-                            <AvatarImage src={nearbyUser.profilePictureUrl} alt={nearbyUser.username} />
-                            <AvatarFallback>{nearbyUser.username.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-grow">
-                            <p className="font-semibold">{nearbyUser.username}</p>
-                            <p className="text-sm text-muted-foreground">Active recently</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary hover:bg-muted rounded-full">
-                            <Heart className="h-6 w-6" />
-                        </Button>
-                    </div>
-                ))}
-            </div>
+          <div className="space-y-4 overflow-y-auto flex-1">
+              {isLoading && <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8" /></div>}
+              {!isLoading && nearbyUsers.length === 0 && <p className="text-center text-muted-foreground pt-4">No users found within {distance}km. Try expanding your search radius!</p>}
+              {!isLoading && nearbyUsers.map(nearbyUser => (
+                  <div key={nearbyUser.id} className="flex items-center gap-4">
+                      <Avatar className="h-14 w-14">
+                          <AvatarImage src={nearbyUser.profilePictureUrl} alt={nearbyUser.username} />
+                          <AvatarFallback>{nearbyUser.username.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-grow">
+                          <p className="font-semibold">{nearbyUser.username}</p>
+                          <p className="text-sm text-muted-foreground">Active recently</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary hover:bg-muted rounded-full">
+                          <Heart className="h-6 w-6" />
+                      </Button>
+                  </div>
+              ))}
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      </div>
     </div>
   );
 }
