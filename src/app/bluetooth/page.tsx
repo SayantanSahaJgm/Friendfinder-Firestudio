@@ -10,6 +10,7 @@ import { collection, getDocs, limit, query, where, Timestamp } from 'firebase/fi
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { addFriend } from '../actions';
+import { errorEmitter, FirestorePermissionError } from '@/firebase';
 
 export default function BluetoothPage() {
   const { firestore } = useFirebase();
@@ -32,25 +33,28 @@ export default function BluetoothPage() {
     // Simulate a 3-second scan
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    try {
-      const oneHourAgo = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
-      const usersQuery = query(
-        collection(firestore, 'users'),
-        where('lastLogin', '>', oneHourAgo),
-        limit(10)
-      );
-      const querySnapshot = await getDocs(usersQuery);
-      const fetchedUsers = querySnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as User))
-        .filter(user => user.id !== currentUser.uid);
+    const oneHourAgo = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
+    const usersQuery = query(
+      collection(firestore, 'users'),
+      where('lastLogin', '>', oneHourAgo),
+      limit(10)
+    );
 
-      setDiscoveredUsers(fetchedUsers);
-    } catch (error) {
-      console.error("Error fetching users for Bluetooth scan:", error);
-      toast({ title: "Scan Error", description: "Could not fetch nearby users.", variant: "destructive" });
-    } finally {
-      setIsScanning(false);
-    }
+    getDocs(usersQuery).then(querySnapshot => {
+        const fetchedUsers = querySnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as User))
+            .filter(user => user.id !== currentUser.uid);
+        setDiscoveredUsers(fetchedUsers);
+    }).catch(serverError => {
+        const permissionError = new FirestorePermissionError({
+            path: 'users',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({ title: "Scan Error", description: "Could not fetch nearby users.", variant: "destructive" });
+    }).finally(() => {
+        setIsScanning(false);
+    });
   };
 
   const handleAddFriend = async (targetUserId: string) => {

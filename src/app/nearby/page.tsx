@@ -10,7 +10,7 @@ import type { User } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { addFriend } from "../actions";
-import { useUser } from "@/firebase";
+import { useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
 
 
 function UserGrid() {
@@ -24,33 +24,36 @@ function UserGrid() {
   useEffect(() => {
     if (!firestore || !currentUser) return;
 
-    const fetchUsers = async () => {
+    const fetchUsers = () => {
       setIsLoading(true);
-      try {
-        // Fetch users who were active in the last hour and are not the current user
-        const oneHourAgo = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
-        const usersQuery = query(
-            collection(firestore, 'users'), 
-            where('lastLogin', '>', oneHourAgo),
-            limit(20)
-        );
-        const querySnapshot = await getDocs(usersQuery);
+      // Fetch users who were active in the last hour and are not the current user
+      const oneHourAgo = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
+      const usersQuery = query(
+          collection(firestore, 'users'), 
+          where('lastLogin', '>', oneHourAgo),
+          limit(20)
+      );
+
+      getDocs(usersQuery).then(querySnapshot => {
         const fetchedUsers = querySnapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as User))
             .filter(user => user.id !== currentUser.uid); // Exclude current user
 
         setUsers(fetchedUsers);
-
-      } catch (error) {
-        console.error("Error fetching users:", error);
+      }).catch(serverError => {
+        const permissionError = new FirestorePermissionError({
+            path: 'users',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
         toast({
             title: "Error",
             description: "Could not fetch online users.",
             variant: "destructive"
         })
-      } finally {
+      }).finally(() => {
         setIsLoading(false);
-      }
+      });
     };
 
     fetchUsers();
