@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Heart,
   LocateFixed,
+  Loader2,
   RefreshCw,
   Search,
   SlidersHorizontal,
