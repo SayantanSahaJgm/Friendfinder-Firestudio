@@ -59,7 +59,7 @@
           "description": "Reference to the User who created the post. (Relationship: User 1:N Post)"
         },
         "text": {
-          "type": "string",
+          "type": "string",-
           "description": "Text content of the post."
         },
         "mediaUrl": {
@@ -219,6 +219,37 @@
         "id",
         "name"
       ]
+    },
+    "FriendRequest": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Friend Request",
+        "type": "object",
+        "description": "Represents a friend request between two users.",
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Unique identifier for the friend request, typically from_to."
+            },
+            "from": {
+                "type": "string",
+                "description": "The user ID of the person sending the request."
+            },
+            "to": {
+                "type": "string",
+                "description": "The user ID of the person receiving the request."
+            },
+            "status": {
+                "type": "string",
+                "enum": ["pending", "accepted", "declined"],
+                "description": "The current status of the friend request."
+            },
+            "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Timestamp of when the request was created."
+            }
+        },
+        "required": ["id", "from", "to", "status", "createdAt"]
     }
   },
   "auth": {
@@ -332,8 +363,22 @@
             }
           ]
         }
+      },
+      {
+          "path": "/friendRequests/{requestId}",
+          "definition": {
+              "entityName": "FriendRequest",
+              "schema": {
+                  "$ref": "#/backend/entities/FriendRequest"
+              },
+              "description": "Stores friend requests between users.",
+              "params": [{
+                  "name": "requestId",
+                  "description": "The unique identifier for the friend request."
+              }]
+          }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the FriendFinder app's core features, focusing on user proximity and connection. It emphasizes authorization independence and secure data access. User data is stored under `/users/{userId}`, ensuring private data is path-based. User posts are stored under `/users/{userId}/posts/{postId}`, creating a clear ownership structure for post data. This approach facilitates simple security rules based on `request.auth.uid`. Stories follow a similar pattern, stored under `/users/{userId}/stories/{storyId}`. Likes and comments are nested under posts (`/users/{userId}/posts/{postId}/likes/{likeId}` and `/users/{userId}/posts/{postId}/comments/{commentId}`), providing a clear hierarchical structure for related data.  The design denormalizes user data where necessary to avoid `get()` calls in security rules, specifically within subcollections. This denormalization ensures that access control can be determined locally within each document. The segregation of user-specific data into dedicated collections enables secure list operations (QAPs) by preventing the mixing of data with differing access requirements. All documents within a given collection share the same security posture."
+    "reasoning": "The Firestore structure is designed to support the FriendFinder app's core features, focusing on user proximity and connection. It emphasizes authorization independence and secure data access. User data is stored under `/users/{userId}`, ensuring private data is path-based. User posts are stored under `/users/{userId}/posts/{postId}`, creating a clear ownership structure for post data. This approach facilitates simple security rules based on `request.auth.uid`. Stories follow a similar pattern, stored under `/users/{userId}/stories/{storyId}`. Likes and comments are nested under posts (`/users/{userId}/posts/{postId}/likes/{likeId}` and `/users/{userId}/posts/{postId}/comments/{commentId}`), providing a clear hierarchical structure for related data. Friend requests are stored in a top-level collection `/friendRequests` to allow both involved users to access and update the request. The design denormalizes user data where necessary to avoid `get()` calls in security rules, specifically within subcollections. This denormalization ensures that access control can be determined locally within each document. The segregation of user-specific data into dedicated collections enables secure list operations (QAPs) by preventing the mixing of data with differing access requirements. All documents within a given collection share the same security posture."
   }
 }

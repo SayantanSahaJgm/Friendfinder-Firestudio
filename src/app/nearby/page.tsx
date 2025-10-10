@@ -3,47 +3,98 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bluetooth, UserPlus, Wifi, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, Users } from "lucide-react";
 import { useFirebase } from "@/firebase";
-import { collection, getDocs, limit, query } from "firebase/firestore";
+import { collection, getDocs, limit, query, where, Timestamp } from "firebase/firestore";
 import type { User } from "@/lib/types";
 import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { addFriend } from "../actions";
+import { useUser } from "@/firebase";
+
 
 function UserGrid() {
   const { firestore } = useFirebase();
+  const { user: currentUser } = useUser();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [requesting, setRequesting] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!firestore) return;
+    if (!firestore || !currentUser) return;
 
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        const usersQuery = query(collection(firestore, 'users'), limit(8));
+        // Fetch users who were active in the last hour and are not the current user
+        const oneHourAgo = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
+        const usersQuery = query(
+            collection(firestore, 'users'), 
+            where('lastLogin', '>', oneHourAgo),
+            limit(20)
+        );
         const querySnapshot = await getDocs(usersQuery);
-        const fetchedUsers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-        
-        // Simulate discovery by shuffling
-        const discoveredUsers = [...fetchedUsers].sort(() => 0.5 - Math.random());
-        setUsers(discoveredUsers);
+        const fetchedUsers = querySnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as User))
+            .filter(user => user.id !== currentUser.uid); // Exclude current user
+
+        setUsers(fetchedUsers);
 
       } catch (error) {
         console.error("Error fetching users:", error);
+        toast({
+            title: "Error",
+            description: "Could not fetch online users.",
+            variant: "destructive"
+        })
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchUsers();
-  }, [firestore]);
+  }, [firestore, currentUser, toast]);
+
+  const handleAddFriend = async (targetUserId: string) => {
+    if (!currentUser) {
+        toast({ title: "You must be logged in.", variant: "destructive" });
+        return;
+    }
+    setRequesting(targetUserId);
+    try {
+        await addFriend(targetUserId);
+        toast({
+            title: "Friend Request Sent!",
+            description: "Your request has been sent.",
+        });
+    } catch (error) {
+        console.error(error);
+        toast({
+            title: "Error",
+            description: "Could not send friend request.",
+            variant: "destructive"
+        });
+    } finally {
+        setRequesting(null);
+    }
+  }
 
 
   if (isLoading) {
     return (
         <div className="flex justify-center items-center h-48">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    )
+  }
+
+  if (users.length === 0) {
+    return (
+        <div className="text-center py-16 text-muted-foreground">
+            <Users className="mx-auto h-12 w-12" />
+            <h3 className="mt-4 text-lg font-semibold">No one is online</h3>
+            <p className="mt-2 text-sm">Check back later to find new friends.</p>
         </div>
     )
   }
@@ -59,9 +110,9 @@ function UserGrid() {
             </Avatar>
             <p className="mt-3 font-semibold truncate">{user.username}</p>
             <p className="mt-1 text-xs text-muted-foreground truncate">{user.interests?.slice(0, 2).join(', ')}</p>
-            <Button size="sm" className="mt-4 w-full">
-              <UserPlus className="mr-2 h-4 w-4" />
-              Connect
+            <Button size="sm" className="mt-4 w-full" onClick={() => handleAddFriend(user.id)} disabled={!!requesting}>
+              {requesting === user.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+              {requesting === user.id ? 'Sending...' : 'Add Friend'}
             </Button>
           </CardContent>
         </Card>
@@ -70,35 +121,21 @@ function UserGrid() {
   );
 }
 
-export default function NearbyPage() {
+export default function OnlineUsersPage() {
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Discover Nearby</CardTitle>
+          <div className="flex items-center gap-2">
+            <Users className="h-6 w-6 text-primary" />
+            <CardTitle>Online Users</CardTitle>
+          </div>
           <CardDescription>
-            Find and connect with people in your immediate vicinity. This is a simulation of Bluetooth and WiFi scanning.
+            Discover and connect with people who are currently active.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="bluetooth" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="bluetooth">
-                <Bluetooth className="mr-2 h-4 w-4" />
-                Bluetooth
-              </TabsTrigger>
-              <TabsTrigger value="wifi">
-                <Wifi className="mr-2 h-4 w-4" />
-                WiFi
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="bluetooth" className="mt-6">
-              <UserGrid />
-            </TabsContent>
-            <TabsContent value="wifi" className="mt-6">
-              <UserGrid />
-            </TabsContent>
-          </Tabs>
+          <UserGrid />
         </CardContent>
       </Card>
     </div>

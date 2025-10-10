@@ -9,7 +9,7 @@ const navItems = [
   { href: "/", icon: Home, label: "Home" },
   { href: "/map", icon: Map, label: "Map" },
   { href: "/add-post", icon: PlusSquare, label: "Add Post", isCentral: true },
-  { href: "/nearby", icon: Users, label: "Nearby" },
+  { href: "/nearby", icon: Users, label: "Online" },
   { href: "/random-chat", icon: Shuffle, label: "Random" },
 ];
 
