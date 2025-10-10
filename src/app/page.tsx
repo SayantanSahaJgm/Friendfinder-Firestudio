@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Camera, Loader2, Plus, WifiOff } from 'lucide-react';
 import { PostCard } from '@/components/post-card';
 import { SmartSuggestions } from '@/components/smart-suggestions';
-import { useAuth, useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
-import { useEffect, useMemo, useState } from 'react';
-import { collection, query, orderBy, getDocs, limit, serverTimestamp, doc } from 'firebase/firestore';
+import { useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
+import { useEffect, useState } from 'react';
+import { collection, query, orderBy, limit, serverTimestamp, doc } from 'firebase/firestore';
 import type { Post } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -132,13 +132,12 @@ export default function Home() {
                   </Avatar>
                 </Link>
                 <Input placeholder="What's on your mind?" className="flex-1 bg-muted" />
-                <Link href="/add-post" passHref>
-                  <Button variant="ghost" size="icon" asChild>
-                    <a>
-                      <Camera className="h-5 w-5 text-muted-foreground" />
-                    </a>
-                  </Button>
-                </Link>
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href="/add-post">
+                    <Camera className="h-5 w-5 text-muted-foreground" />
+                    <span className="sr-only">Add Post</span>
+                  </Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
