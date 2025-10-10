@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useFirebase, useUser } from "@/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { UserCheck, UserX, Loader2, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@/lib/types";
 
@@ -26,46 +26,45 @@ export default function FriendsPage() {
     
     const [requests, setRequests] = useState<FriendRequest[]>([]);
     const [friends, setFriends] = useState<Friend[]>([]);
-    const [isLoading, setIsLoading] = useState<'requests' | 'friends' | 'action' | false>(true);
+    const [isLoading, setIsLoading] = useState<'requests' | 'friends' | 'action' | boolean>(true);
+
+    const fetchRequests = useCallback(async () => {
+        if (!currentUser || !firestore) return;
+        setIsLoading('requests');
+        try {
+            const q = query(collection(firestore, 'friendRequests'), where('to', '==', currentUser.uid), where('status', '==', 'pending'));
+            const querySnapshot = await getDocs(q);
+            
+            const requestPromises = querySnapshot.docs.map(async (requestDoc) => {
+                const requestData = requestDoc.data();
+                const userDocSnapshot = await getDocs(query(collection(firestore, 'users'), where('id', '==', requestData.from)));
+
+                if (!userDocSnapshot.empty) {
+                    const userData = userDocSnapshot.docs[0].data() as User;
+                    return {
+                        id: requestDoc.id,
+                        from: requestData.from,
+                        fromUsername: userData.username,
+                        fromProfilePictureUrl: userData.profilePictureUrl || `https://picsum.photos/seed/${requestData.from}/200/200`
+                    };
+                }
+                return null;
+            });
+
+            const settledRequests = (await Promise.all(requestPromises)).filter(r => r !== null) as FriendRequest[];
+            setRequests(settledRequests);
+
+        } catch (error) {
+            console.error("Error fetching friend requests:", error);
+            toast({ title: "Error", description: "Could not fetch friend requests.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentUser, firestore, toast]);
 
     useEffect(() => {
-        if (!currentUser || !firestore) return;
-
-        const fetchRequests = async () => {
-            setIsLoading('requests');
-            try {
-                const q = query(collection(firestore, 'friendRequests'), where('to', '==', currentUser.uid), where('status', '==', 'pending'));
-                const querySnapshot = await getDocs(q);
-                
-                const requestPromises = querySnapshot.docs.map(async (requestDoc) => {
-                    const requestData = requestDoc.data();
-                    const userDoc = await getDocs(query(collection(firestore, 'users'), where('id', '==', requestData.from)));
-
-                    if (!userDoc.empty) {
-                        const userData = userDoc.docs[0].data() as User;
-                        return {
-                            id: requestDoc.id,
-                            from: requestData.from,
-                            fromUsername: userData.username,
-                            fromProfilePictureUrl: userData.profilePictureUrl || `https://picsum.photos/seed/${requestData.from}/200/200`
-                        };
-                    }
-                    return null;
-                });
-
-                const settledRequests = (await Promise.all(requestPromises)).filter(r => r !== null) as FriendRequest[];
-                setRequests(settledRequests);
-
-            } catch (error) {
-                console.error("Error fetching friend requests:", error);
-                toast({ title: "Error", description: "Could not fetch friend requests.", variant: "destructive" });
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         fetchRequests();
-    }, [currentUser, firestore, toast]);
+    }, [fetchRequests]);
 
     const handleRequest = async (requestId: string, fromId: string, accepted: boolean) => {
         if (!currentUser || !firestore) return;
@@ -82,7 +81,7 @@ export default function FriendsPage() {
                 toast({ title: "Request Declined", description: "The request has been removed." });
             }
             // Refresh requests
-            setRequests(prev => prev.filter(r => r.id !== requestId));
+            fetchRequests();
         } catch (error) {
             console.error("Error handling request:", error);
             toast({ title: "Error", description: "Could not process the request.", variant: "destructive" });

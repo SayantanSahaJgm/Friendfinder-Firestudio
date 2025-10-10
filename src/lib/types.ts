@@ -9,6 +9,8 @@ export type User = {
   locationEnabled?: boolean;
   lastLogin?: Timestamp;
   interests?: string[];
+  friends?: string[];
+  friendRequests?: string[];
   location?: {
     latitude: number;
     longitude: number;
