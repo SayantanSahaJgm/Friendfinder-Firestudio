@@ -10,7 +10,7 @@ import { PostCard } from '@/components/post-card';
 import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, limit, serverTimestamp, doc, where, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, serverTimestamp, doc, where, Timestamp, getDocs, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import type { Post, Story } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
