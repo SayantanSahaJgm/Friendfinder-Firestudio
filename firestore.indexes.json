@@ -5,6 +5,10 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "locationEnabled",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "lastLogin",
           "order": "DESCENDING"
         }
