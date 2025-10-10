@@ -10,11 +10,11 @@ import { PostCard } from '@/components/post-card';
 import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useAuth, useCollection, useFirebase, useUser } from '@/firebase';
 import { useEffect, useMemo, useState } from 'react';
-import { collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, limit, serverTimestamp, doc } from 'firebase/firestore';
 import type { Post, User } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { doc } from 'firebase/firestore';
+
 
 function Stories() {
   // This is a placeholder for story functionality.
@@ -132,6 +132,7 @@ export default function Home() {
         bio: 'Just joined Proximity!',
         lastLogin: serverTimestamp(),
         locationEnabled: false,
+        interests: [],
       }, { merge: true });
     }
   }, [user, firestore]);
@@ -171,9 +172,9 @@ export default function Home() {
                 <Input placeholder="What's on your mind?" className="flex-1 bg-muted" />
                 <Link href="/add-post" passHref>
                   <Button variant="ghost" size="icon" asChild>
-                    <Link href="/add-post">
+                    <a>
                       <Camera className="h-5 w-5 text-muted-foreground" />
-                    </Link>
+                    </a>
                   </Button>
                 </Link>
               </div>
