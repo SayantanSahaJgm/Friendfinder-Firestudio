@@ -1,7 +1,7 @@
 'use server';
 
 import { suggestRelevantConnections } from '@/ai/flows/suggest-relevant-connections';
-import { currentUser, potentialUsers } from '@/lib/data';
+import { potentialUsers } from '@/lib/data';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { cookies } from 'next/headers';
 import {DecodedIdToken} from 'firebase-admin/auth';
@@ -49,7 +49,7 @@ export async function getSuggestions() {
   try {
     const suggestions = await suggestRelevantConnections({
       userProfile: {
-        interests: currentUser.interests,
+        interests: [], // This should be replaced with the current user's interests from Firestore
         pastConnections: [],
       },
       potentialConnections: potentialUsers.map(u => ({ username: u.name, interests: u.interests })),
