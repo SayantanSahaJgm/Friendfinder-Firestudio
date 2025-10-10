@@ -1,0 +1,128 @@
+/**
+ * @file Firestore Security Rules for FriendFinder App
+ * @corePhilosophy This ruleset enforces a strict user-ownership model. All data is nested under /users/{userId} to ensure that only the authenticated user can access their own data.
+ * @dataStructure User data, posts, likes, comments, and stories are all stored under the /users/{userId} path, creating a clear hierarchical structure.
+ * @keySecurityDecisions User listing is not allowed. All write operations are restricted to the owner of the data. Data consistency between the path and the document's internal fields is enforced.
+ * @denormalizationForAuthorization No external `get()` calls are needed. Authorization decisions are based solely on the current path and the authenticated user's ID.
+ * @structuralSegregation User-specific data is segregated into dedicated subcollections under `/users/{userId}`. This enables secure list operations.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Enforces user-ownership for user profiles.
+     * @path /users/{userId}
+     * @allow (create) - Allows a user to create their own profile if the userId matches their auth UID.
+     * @allow (get, list, update, delete) - Allows a user to read, update, or delete their own profile if the userId matches their auth UID.
+     * @deny (create) - Denies creation if the userId does not match the auth UID.
+     * @deny (update, delete) - Denies updates or deletes if the userId does not match the auth UID or the document does not exist.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.id == userId;
+      allow delete: if isSignedIn() && isOwner(userId) && resource.data.id == userId;
+    }
+
+    /**
+     * @description Enforces user-ownership for posts.
+     * @path /users/{userId}/posts/{postId}
+     * @allow (create) - Allows a user to create a post under their userId.
+     * @allow (get, list, update, delete) - Allows a user to read, update, or delete their own posts.
+     * @deny (create) - Denies creation if the userId does not match the auth UID.
+     * @deny (update, delete) - Denies updates or deletes if the userId does not match the auth UID or the document does not exist.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/posts/{postId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.userId == userId;
+      allow delete: if isSignedIn() && isOwner(userId) && resource.data.userId == userId;
+    }
+
+    /**
+     * @description Enforces user-ownership for likes.
+     * @path /users/{userId}/posts/{postId}/likes/{likeId}
+     * @allow (create) - Allows a user to create a like under their userId and postId.
+     * @allow (get, list, update, delete) - Allows a user to read, update, or delete their own likes.
+     * @deny (create) - Denies creation if the userId does not match the auth UID.
+     * @deny (update, delete) - Denies updates or deletes if the userId does not match the auth UID or the document does not exist.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/posts/{postId}/likes/{likeId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.userId == userId;
+      allow delete: if isSignedIn() && isOwner(userId) && resource.data.userId == userId;
+    }
+
+    /**
+     * @description Enforces user-ownership for comments.
+     * @path /users/{userId}/posts/{postId}/comments/{commentId}
+     * @allow (create) - Allows a user to create a comment under their userId and postId.
+     * @allow (get, list, update, delete) - Allows a user to read, update, or delete their own comments.
+     * @deny (create) - Denies creation if the userId does not match the auth UID.
+     * @deny (update, delete) - Denies updates or deletes if the userId does not match the auth UID or the document does not exist.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/posts/{postId}/comments/{commentId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.userId == userId;
+      allow delete: if isSignedIn() && isOwner(userId) && resource.data.userId == userId;
+    }
+
+    /**
+     * @description Enforces user-ownership for stories.
+     * @path /users/{userId}/stories/{storyId}
+     * @allow (create) - Allows a user to create a story under their userId.
+     * @allow (get, list, update, delete) - Allows a user to read, update, or delete their own stories.
+     * @deny (create) - Denies creation if the userId does not match the auth UID.
+     * @deny (update, delete) - Denies updates or deletes if the userId does not match the auth UID or the document does not exist.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/stories/{storyId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.userId == userId;
+      allow delete: if isSignedIn() && isOwner(userId) && resource.data.userId == userId;
+    }
+  }
+}

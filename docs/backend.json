@@ -1,0 +1,339 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the FriendFinder app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "username": {
+          "type": "string",
+          "description": "User's display name."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "bio": {
+          "type": "string",
+          "description": "User's profile bio."
+        },
+        "profilePictureUrl": {
+          "type": "string",
+          "description": "URL of the user's profile picture.",
+          "format": "uri"
+        },
+        "locationEnabled": {
+          "type": "boolean",
+          "description": "Indicates whether the user has enabled location sharing."
+        },
+        "lastLogin": {
+          "type": "string",
+          "description": "Timestamp of the user's last login.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email"
+      ]
+    },
+    "Post": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Post",
+      "type": "object",
+      "description": "Represents a post made by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the post entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who created the post. (Relationship: User 1:N Post)"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text content of the post."
+        },
+        "mediaUrl": {
+          "type": "string",
+          "description": "URL of the media attached to the post (image, video).",
+          "format": "uri"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the post was created.",
+          "format": "date-time"
+        },
+        "likeIds": {
+          "type": "array",
+          "description": "References to Likes. (Relationship: Like 1:N Post)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commentIds": {
+          "type": "array",
+          "description": "References to Comments. (Relationship: Comment 1:N Post)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "text",
+        "timestamp"
+      ]
+    },
+    "Like": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Like",
+      "type": "object",
+      "description": "Represents a like on a post.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the like entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who liked the post. (Relationship: User 1:N Like)"
+        },
+        "postId": {
+          "type": "string",
+          "description": "Reference to the Post that was liked. (Relationship: Post 1:N Like)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the post was liked.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "postId",
+        "timestamp"
+      ]
+    },
+    "Comment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Comment",
+      "type": "object",
+      "description": "Represents a comment on a post.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the comment entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who created the comment. (Relationship: User 1:N Comment)"
+        },
+        "postId": {
+          "type": "string",
+          "description": "Reference to the Post that the comment belongs to. (Relationship: Post 1:N Comment)"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text content of the comment."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the comment was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "postId",
+        "text",
+        "timestamp"
+      ]
+    },
+    "Story": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Story",
+      "type": "object",
+      "description": "Represents a user's story that disappears after 24 hours.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the story entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who created the story. (Relationship: User 1:N Story)"
+        },
+        "mediaUrl": {
+          "type": "string",
+          "description": "URL of the media (image/video) in the story.",
+          "format": "uri"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the story was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "mediaUrl",
+        "timestamp"
+      ]
+    },
+    "Interest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Interest",
+      "type": "object",
+      "description": "Represents a user's interest.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the interest entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the interest (e.g., 'Photography', 'Hiking')."
+        },
+        "userIDs": {
+          "type": "array",
+          "description": "References to Users who are interested in the interest. (Relationship: User N:N Interest)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile data. Uses path-based ownership for private data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/posts/{postId}",
+        "definition": {
+          "entityName": "Post",
+          "schema": {
+            "$ref": "#/backend/entities/Post"
+          },
+          "description": "Stores user posts.  Path-based ownership enables secure access control.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "postId",
+              "description": "The unique identifier for the post."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/posts/{postId}/likes/{likeId}",
+        "definition": {
+          "entityName": "Like",
+          "schema": {
+            "$ref": "#/backend/entities/Like"
+          },
+          "description": "Stores likes for a specific post. Path-based ownership for simple security rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "postId",
+              "description": "The unique identifier for the post."
+            },
+            {
+              "name": "likeId",
+              "description": "The unique identifier for the like."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/posts/{postId}/comments/{commentId}",
+        "definition": {
+          "entityName": "Comment",
+          "schema": {
+            "$ref": "#/backend/entities/Comment"
+          },
+          "description": "Stores comments for a specific post. Path-based ownership simplifies security rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "postId",
+              "description": "The unique identifier for the post."
+            },
+            {
+              "name": "commentId",
+              "description": "The unique identifier for the comment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/stories/{storyId}",
+        "definition": {
+          "entityName": "Story",
+          "schema": {
+            "$ref": "#/backend/entities/Story"
+          },
+          "description": "Stores user stories. Path-based ownership ensures secure access control.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "storyId",
+              "description": "The unique identifier for the story."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support the FriendFinder app's core features, focusing on user proximity and connection. It emphasizes authorization independence and secure data access. User data is stored under `/users/{userId}`, ensuring private data is path-based. User posts are stored under `/users/{userId}/posts/{postId}`, creating a clear ownership structure for post data. This approach facilitates simple security rules based on `request.auth.uid`. Stories follow a similar pattern, stored under `/users/{userId}/stories/{storyId}`. Likes and comments are nested under posts (`/users/{userId}/posts/{postId}/likes/{likeId}` and `/users/{userId}/posts/{postId}/comments/{commentId}`), providing a clear hierarchical structure for related data.  The design denormalizes user data where necessary to avoid `get()` calls in security rules, specifically within subcollections. This denormalization ensures that access control can be determined locally within each document. The segregation of user-specific data into dedicated collections enables secure list operations (QAPs) by preventing the mixing of data with differing access requirements. All documents within a given collection share the same security posture."
+  }
+}
