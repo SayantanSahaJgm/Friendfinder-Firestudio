@@ -136,33 +136,33 @@ export default function MapPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] bg-gray-800 flex flex-col text-white">
+    <div className="h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col">
       <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
-        <Button variant="ghost" size="icon" className="bg-gray-900/50 rounded-full hover:bg-gray-800">
+        <Button variant="ghost" size="icon" className="bg-background/50 rounded-full hover:bg-muted">
           <ArrowLeft />
         </Button>
-        <Button onClick={toggleSharing} className="bg-gray-900/50 rounded-full hover:bg-gray-800 backdrop-blur-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 mr-2 ${isSharing ? 'text-blue-400' : 'text-gray-400'}`} viewBox="0 0 20 20" fill="currentColor">
+        <Button onClick={toggleSharing} className="bg-background/50 rounded-full hover:bg-muted backdrop-blur-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 mr-2 ${isSharing ? 'text-blue-500' : 'text-muted-foreground'}`} viewBox="0 0 20 20" fill="currentColor">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
           {isSharing ? 'Sharing Location' : 'Location Paused'}
         </Button>
-        <Button variant="ghost" size="icon" onClick={requestLocation} className="bg-gray-900/50 rounded-full hover:bg-gray-800">
+        <Button variant="ghost" size="icon" onClick={requestLocation} className="bg-background/50 rounded-full hover:bg-muted">
           <RefreshCw className={isLoading ? 'animate-spin' : ''} />
         </Button>
       </header>
 
       <div className="flex-grow relative">
         <Image
-          src="https://picsum.photos/seed/darkmap/1200/1600"
+          src="https://picsum.photos/seed/lightmap/1200/1600"
           fill
           objectFit="cover"
-          alt="Dark map"
+          alt="Light map"
           className="opacity-40"
-          data-ai-hint="dark map"
+          data-ai-hint="light map"
         />
         <div className="absolute top-1/2 right-4 flex flex-col gap-4">
-           <Button variant="ghost" size="icon" onClick={requestLocation} className="bg-gray-900/50 rounded-full hover:bg-gray-800">
+           <Button variant="ghost" size="icon" onClick={requestLocation} className="bg-background/50 rounded-full hover:bg-muted">
              <LocateFixed />
            </Button>
         </div>
@@ -172,7 +172,7 @@ export default function MapPage() {
                     <AvatarImage src={user?.photoURL ?? `https://picsum.photos/seed/${user?.uid}/200/200`} />
                     <AvatarFallback>{user?.displayName?.charAt(0) ?? 'Y'}</AvatarFallback>
                 </Avatar>
-                <div className="bg-gray-900/70 text-white text-xs rounded-full px-2 py-1 mt-1">You</div>
+                <div className="bg-background/70 text-foreground text-xs rounded-full px-2 py-1 mt-1">You</div>
             </div>
         )}
         {nearbyUsers[0] && (
@@ -195,28 +195,28 @@ export default function MapPage() {
 
       <Sheet>
         <SheetTrigger asChild>
-          <div className="absolute bottom-0 left-0 right-0 h-48 bg-gray-900 rounded-t-2xl cursor-pointer p-2">
-            <div className="w-12 h-1.5 bg-gray-700 rounded-full mx-auto" />
+          <div className="absolute bottom-0 left-0 right-0 h-48 bg-background/80 backdrop-blur-sm rounded-t-2xl cursor-pointer p-2 border-t">
+            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto" />
             <div className="p-4">
                  <div className="relative">
-                    <Input placeholder="Search for friends..." className="bg-gray-800 border-gray-700 h-12 pl-10" />
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500"/>
-                    <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                    <Input placeholder="Search for friends..." className="bg-muted border-none h-12 pl-10" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
+                    <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                         <SlidersHorizontal />
                     </Button>
                 </div>
             </div>
           </div>
         </SheetTrigger>
-        <SheetContent side="bottom" className="bg-gray-900 text-white border-none rounded-t-2xl h-[80vh]">
+        <SheetContent side="bottom" className="bg-background text-foreground border-none rounded-t-2xl h-[80vh]">
           <SheetHeader>
-            <div className="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-4" />
+            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
             <SheetTitle className="text-center text-lg">People Nearby</SheetTitle>
           </SheetHeader>
           <div className="p-4 space-y-4">
             <div className="space-y-4 overflow-y-auto max-h-[calc(80vh-10rem)]">
                 {isLoading && <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8" /></div>}
-                {!isLoading && nearbyUsers.length === 0 && <p className="text-center text-gray-400">No users found nearby. Make sure your location sharing is on!</p>}
+                {!isLoading && nearbyUsers.length === 0 && <p className="text-center text-muted-foreground">No users found nearby. Make sure your location sharing is on!</p>}
                 {!isLoading && nearbyUsers.map(nearbyUser => (
                     <div key={nearbyUser.id} className="flex items-center gap-4">
                         <Avatar className="h-14 w-14">
@@ -225,9 +225,9 @@ export default function MapPage() {
                         </Avatar>
                         <div className="flex-grow">
                             <p className="font-semibold">{nearbyUser.username}</p>
-                            <p className="text-sm text-gray-400">Active recently</p>
+                            <p className="text-sm text-muted-foreground">Active recently</p>
                         </div>
-                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-gray-800 rounded-full">
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary hover:bg-muted rounded-full">
                             <Heart className="h-6 w-6" />
                         </Button>
                     </div>
