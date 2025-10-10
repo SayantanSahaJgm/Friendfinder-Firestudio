@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Camera, Loader2, Plus, WifiOff } from 'lucide-react';
 import { PostCard } from '@/components/post-card';
 import { SmartSuggestions } from '@/components/smart-suggestions';
-import { useAuth, useCollection, useFirebase, useUser } from '@/firebase';
+import { useAuth, useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
 import { useEffect, useMemo, useState } from 'react';
 import { collection, query, orderBy, getDocs, limit, serverTimestamp, doc } from 'firebase/firestore';
-import type { Post, User } from '@/lib/types';
+import type { Post } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -38,50 +38,12 @@ function Stories() {
 
 function Feed() {
   const { firestore } = useFirebase();
-  const [posts, setPosts] = useState<(Post & { user: User })[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!firestore) return;
-
-    const fetchPosts = async () => {
-      setIsLoading(true);
-      try {
-        // This is a simplified feed. A real app would have a more complex feed aggregation logic.
-        // Here we're just getting the 10 most recent posts from any user.
-        // This is not scalable and would require Firestore indexes.
-        const usersSnapshot = await getDocs(collection(firestore, 'users'));
-        let allPosts: (Post & { user: User })[] = [];
-
-        for (const userDoc of usersSnapshot.docs) {
-            const user = { id: userDoc.id, ...userDoc.data() } as User;
-            const postsQuery = query(collection(firestore, `users/${userDoc.id}/posts`), orderBy('timestamp', 'desc'), limit(10));
-            const postsSnapshot = await getDocs(postsQuery);
-            const userPosts = postsSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...(doc.data() as Omit<Post, 'id'>),
-                user: user,
-            }));
-            allPosts = [...allPosts, ...userPosts];
-        }
-
-        // Sort all posts by timestamp
-        allPosts.sort((a, b) => {
-            const dateA = a.timestamp?.toDate() ?? new Date(0);
-            const dateB = b.timestamp?.toDate() ?? new Date(0);
-            return dateB.getTime() - dateA.getTime();
-        });
-
-        setPosts(allPosts);
-      } catch (error) {
-        console.error("Error fetching feed:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPosts();
+  const postsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'posts'), orderBy('timestamp', 'desc'), limit(20));
   }, [firestore]);
+
+  const { data: posts, isLoading } = useCollection<Post>(postsQuery);
 
   if (isLoading) {
     return (
@@ -91,7 +53,7 @@ function Feed() {
     );
   }
 
-  if (posts.length === 0) {
+  if (!posts || posts.length === 0) {
     return (
         <div className="text-center py-16 text-muted-foreground">
             <WifiOff className="mx-auto h-12 w-12" />

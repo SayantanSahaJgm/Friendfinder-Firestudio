@@ -26,4 +26,8 @@ export type Post = {
   timestamp: Timestamp;
   likeIds: string[];
   commentIds: string[];
+  user: {
+    username: string;
+    profilePictureUrl?: string;
+  }
 };

@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Map, PlusSquare, Shuffle, User, Users } from "lucide-react";
+import { Home, Map, PlusSquare, Shuffle, User, Users, Search, Bluetooth, Wifi } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", icon: Home, label: "Home" },
+  { href: "/", icon: Home, label: "Home"},
   { href: "/map", icon: Map, label: "Map" },
+  { href: "/bluetooth", icon: Bluetooth, label: "Bluetooth" },
   { href: "/add-post", icon: PlusSquare, label: "Add Post", isCentral: true },
-  { href: "/nearby", icon: Users, label: "Online" },
+  { href: "/wifi", icon: Wifi, label: "WiFi" },
+  { href: "/search", icon: Search, label: "Search" },
   { href: "/random-chat", icon: Shuffle, label: "Random" },
 ];
 

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { Post, User } from "@/lib/types";
+import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Heart, MessageCircle, MoreHorizontal, Share2 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 
 type PostCardProps = {
-  post: Post & { user: User };
+  post: Post;
 };
 
 export function PostCard({ post }: PostCardProps) {

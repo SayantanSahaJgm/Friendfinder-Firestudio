@@ -5,22 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { ImagePlus, Send, Loader2 } from 'lucide-react';
-import { useAuth, useFirebase } from '@/firebase';
+import { useAuth, useFirebase, useUser } from '@/firebase';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import type { User } from '@/lib/types';
 
 export default function AddPostPage() {
   const [postContent, setPostContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { firestore } = useFirebase();
-  const auth = useAuth();
+  const { user: currentUser } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
   const handlePublish = async () => {
-    if (!auth.currentUser || !firestore) {
+    if (!currentUser || !firestore) {
       toast({
         title: 'Authentication Error',
         description: 'You must be logged in to create a post.',
@@ -37,18 +38,21 @@ export default function AddPostPage() {
         return;
     }
 
-
     setIsLoading(true);
 
-    const postsCollection = collection(firestore, `users/${auth.currentUser.uid}/posts`);
+    const postsCollection = collection(firestore, `posts`);
     
     try {
         await addDocumentNonBlocking(postsCollection, {
         text: postContent,
-        userId: auth.currentUser.uid,
+        userId: currentUser.uid,
         timestamp: serverTimestamp(),
         likeIds: [],
         commentIds: [],
+        user: {
+            username: currentUser.displayName || `user_${currentUser.uid.substring(0, 6)}`,
+            profilePictureUrl: currentUser.photoURL || `https://picsum.photos/seed/${currentUser.uid}/200/200`
+        }
       });
 
       toast({
