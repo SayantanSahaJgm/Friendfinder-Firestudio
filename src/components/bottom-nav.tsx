@@ -22,7 +22,7 @@ export default function BottomNav() {
     <div className="fixed bottom-0 left-0 z-40 w-full border-t bg-background/95 backdrop-blur-sm lg:hidden">
       <nav className="container mx-auto grid h-20 max-w-2xl grid-cols-7 items-center justify-around px-1">
         {navItems.map((item) => {
-          const isActive = (pathname === "/" && item.href === "/") || (item.href !== "/" && pathname.startsWith(item.href));
+          const isActive = pathname === item.href;
           
           if (item.isCentral) {
             return (
