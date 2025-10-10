@@ -1,132 +1,130 @@
 /**
- * @fileOverview Firestore Security Rules for FriendFinder App
+ * @fileoverview Firestore Security Rules for FriendFinder App
  *
  * Core Philosophy:
- * This ruleset prioritizes user data protection by implementing strict
- * ownership-based access control for user profiles and related data. It allows
- * public read access to posts and stories while enforcing ownership for
- * modifications.
+ * This ruleset prioritizes a secure, user-centric data model. It leverages path-based ownership and denormalization to minimize reads and maximize security.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile data, accessible only to the
- *   authenticated user with matching ID.
- * - /posts/{postId}: Stores user-generated posts, publicly readable but
- *   modifiable only by the owner.
- * - /posts/{postId}/likes/{likeId}: Stores likes for posts, only the
- *   authenticated user with matching userId can create a like.
- * - /posts/{postId}/comments/{commentId}: Stores comments for posts, only the
- *   authenticated user with matching userId can create a comment.
- * - /stories/{storyId}: Stores user stories, publicly readable but modifiable
- *   only by the owner.
- * - /friendRequests/{friendRequestId}: Stores friend requests, only the recipient
- *   or sender can read or update friend request.
+ * - /users/{userId}: Stores private user profile data. Access is strictly limited to the owning user.
+ * - /posts/{postId}: Stores user posts.  Posts are publicly readable, but only the owner can modify or delete them.
+ * - /posts/{postId}/likes/{likeId}: Stores likes for each post.  Only authenticated users can create likes. Users can only delete their own likes.
+ * - /posts/{postId}/comments/{commentId}: Stores comments for each post.  Only authenticated users can create comments. Users can only delete their own comments.
+ * - /stories/{storyId}: Stores user stories. Stories are publicly readable, but only the owner can create them. Stories can be modified or deleted only by their owner.
+ * - /friendRequests/{requestId}: Stores friend requests between users.
  *
  * Key Security Decisions:
- * - User listing is disallowed.
- * - Public read access is granted to the /posts and /stories collections to
- *   enable a global feed.
- * - Strict ownership is enforced for user profiles and modifications to posts
- *   and stories.
- * - No data validation is performed in this prototype except for
- *   authorization-critical fields.
+ * - User listing is generally allowed, but can be restricted later using server-side filtering.
+ * - Data validation is minimal in this prototyping phase, focusing on ownership and relational integrity.
  *
  * Denormalization for Authorization:
- * - Posts and Stories include denormalized user data (username, profilePictureUrl)
- *   to avoid extra reads for display.
+ * - Posts denormalize user data (username, profilePictureUrl) to avoid extra reads during display.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secures user profiles, enforcing strict ownership.
+     * @description Enforces strict user-ownership for user profiles.  Only the authenticated user can read or write their own profile data.
      * @path /users/{userId}
-     * @allow (create) User A creates their profile with ID 'A'.
-     * @allow (get, update, delete) User A reads, updates, or deletes their own profile (ID 'A').
-     * @deny (create, get, update, delete) User B attempts to access User A's profile (ID 'A').
-     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     * @allow (read, write) if request.auth.uid == userId
+     * @deny (read, write) if request.auth.uid != userId
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Secures posts, allowing public read access but enforcing ownership for modifications.
+     * @description Allows public reading of posts, but restricts creation, updates, and deletion to the post's owner.
      * @path /posts/{postId}
-     * @allow (get, list) Any user can read any post.
-     * @allow (create) User A creates a post with authorId 'A'.
-     * @allow (update, delete) User A updates or deletes their own post.
-     * @deny (create, update, delete) User B attempts to modify User A's post.
-     * @principle Enforces document ownership for writes while allowing public reads.
+     * @allow (get, list) Everyone can read all posts.
+     * @allow (create) Only authenticated users can create posts, with userId matching auth.uid.
+     * @allow (update, delete) Only the owner can modify or delete a post.
+     * @deny (create) if request.resource.data.userId != request.auth.uid
+     * @deny (update, delete) if request.auth.uid != resource.data.userId
+     * @principle Public read, owner-only write.  Enforces ownership on write operations and ensures that the userId matches the authenticated user on creation.
      */
     match /posts/{postId} {
-      allow get, list: if true;
+      allow get: if true;
+      allow list: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isExistingOwner(resource.data.userId);
       allow delete: if isExistingOwner(resource.data.userId);
     }
 
     /**
-     * @description Secures likes for posts, enforcing user-specific creation.
+     * @description Allows authenticated users to create likes, and only allows deletion of likes by their owner.
      * @path /posts/{postId}/likes/{likeId}
-     * @allow (create) User A likes a post, creating a 'like' document with userId 'A'.
-     * @deny (get, list, update, delete) All other operations are denied.
-     * @principle Enforces that only authenticated users can create likes for posts.
+     * @allow (create) Authenticated user can create likes.
+     * @allow (delete) The owner can delete the like.
+     * @deny (create) if request.auth == null
+     * @deny (delete) if request.auth.uid != resource.data.userId
+     * @principle Authenticated create, owner-only delete for likes.
      */
     match /posts/{postId}/likes/{likeId} {
       allow get: if true;
       allow list: if true;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false;
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if isExistingOwner(resource.data.userId);
     }
 
     /**
-     * @description Secures comments for posts, enforcing user-specific creation.
+     * @description Allows authenticated users to create comments, and only allows deletion of comments by their owner.
      * @path /posts/{postId}/comments/{commentId}
-     * @allow (create) User A comments on a post, creating a 'comment' document with userId 'A'.
-     * @deny (get, list, update, delete) All other operations are denied.
-     * @principle Enforces that only authenticated users can create comments for posts.
+     * @allow (create) Authenticated user can create comments.
+     * @allow (delete) The owner can delete the comment.
+     * @deny (create) if request.auth == null
+     * @deny (delete) if request.auth.uid != resource.data.userId
+     * @principle Authenticated create, owner-only delete for comments.
      */
     match /posts/{postId}/comments/{commentId} {
-        allow get: if true;
-        allow list: if true;
-        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if false;
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if isExistingOwner(resource.data.userId);
     }
 
     /**
-     * @description Secures stories, allowing public read access but enforcing ownership for modifications.
+     * @description Allows public reading of stories, but restricts creation, updates, and deletion to the story's owner.
      * @path /stories/{storyId}
-     * @allow (get, list) Any user can read any story.
-     * @allow (create) User A creates a story with userId 'A'.
-     * @allow (update, delete) User A updates or deletes their own story.
-     * @deny (create, update, delete) User B attempts to modify User A's story.
-     * @principle Enforces document ownership for writes while allowing public reads.
+     * @allow (get, list) Everyone can read all stories.
+     * @allow (create) Only authenticated users can create stories.
+     * @allow (update, delete) Only the owner can modify or delete a story.
+     * @deny (create) if request.resource.data.userId != request.auth.uid
+     * @deny (update, delete) if request.auth.uid != resource.data.userId
+     * @principle Public read, owner-only write.  Enforces ownership on write operations and ensures that the userId matches the authenticated user on creation.
      */
     match /stories/{storyId} {
-      allow get, list: if true;
+      allow get: if true;
+      allow list: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isExistingOwner(resource.data.userId);
       allow delete: if isExistingOwner(resource.data.userId);
     }
 
-    /**
-     * @description Secures friend requests between users. Only the sender or recipient can read or update the request.
-     * @path /friendRequests/{requestId}
-     * @allow (get, update) User A or B can read/update a friend request where they are the sender or receiver.
-     * @allow (create) User A can create a friend request where they are the sender.
-     * @deny (get, update, create) User C attempts to access a friend request between A and B.
-     */
-    match /friendRequests/{requestId} {
-        allow get, update: if isSignedIn() && (request.auth.uid == resource.data.to || request.auth.uid == resource.data.from);
-        allow list: if false;
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.from;
-        allow delete: if false;
-    }
+      /**
+       * @description Controls access to friend requests, allowing users to create, update, and delete requests they are involved in.
+       * @path /friendRequests/{requestId}
+       * @allow (create) Authenticated users can create a friend request.
+       * @allow (get, list) Authenticated users can read friend requests where they are the sender or receiver.
+       * @allow (update) Authenticated users can update friend requests where they are the sender or receiver.
+       * @allow (delete) Authenticated users can delete friend requests where they are the sender or receiver.
+       * @deny (create) if request.auth == null
+       * @deny (get, list, update, delete) if request.auth.uid != resource.data.from && request.auth.uid != resource.data.to
+       * @principle Allows users to manage friend requests they are involved in.
+       */
+      match /friendRequests/{requestId} {
+          allow get, list: if isSignedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+          allow create: if isSignedIn();
+          allow update: if isSignedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+          allow delete: if isSignedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      }
 
     // Helper functions
     function isSignedIn() {
@@ -134,11 +132,11 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
     function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      return isSignedIn() && isOwner(userId) && resource != null;
     }
   }
 }
