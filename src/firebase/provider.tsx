@@ -4,18 +4,13 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Auth, User } from 'firebase/auth';
-import { Firestore, doc, collection } from 'firebase/firestore';
-import { useUser } from './auth/use-user';
-import { useDoc } from './firestore/use-doc';
-import { useCollection } from './firestore/use-collection';
+import { Firestore } from 'firebase/firestore';
 
 // Define the shape of the context data
 interface FirebaseContextValue {
   firebaseApp: FirebaseApp | null;
   auth: Auth | null;
   firestore: Firestore | null;
-  user: User | null;
-  isUserLoading: boolean;
 }
 
 // Create the context
@@ -74,17 +69,14 @@ export function FirebaseProvider({
   auth: Auth | null;
   firestore: Firestore | null;
 }) {
-  const { user, isUserLoading } = useUser();
 
   const value = useMemo(
     () => ({
       firebaseApp,
       auth,
       firestore,
-      user,
-      isUserLoading,
     }),
-    [firebaseApp, auth, firestore, user, isUserLoading]
+    [firebaseApp, auth, firestore]
   );
 
   return (
