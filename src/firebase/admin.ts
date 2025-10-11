@@ -1,22 +1,32 @@
-'use server';
-import { initializeApp, getApps, getApp, type App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { firebaseConfig } from './config';
 
-let app: App;
+import * as admin from 'firebase-admin';
 
-export async function getFirebaseAdmin() {
-  if (!getApps().length) {
-    app = initializeApp({
-        projectId: firebaseConfig.projectId,
-    });
-  } else {
-    app = getApp();
+// This is a global cache for the Firebase admin app instance.
+// The check `!admin.apps.length` prevents re-initializing the app on hot reloads.
+let firebaseAdmin: admin.app.App;
+
+async function getFirebaseAdmin() {
+  if (firebaseAdmin) {
+    return firebaseAdmin;
   }
 
-  const auth = getAuth(app);
-  const firestore = getFirestore(app);
+  if (admin.apps.length > 0) {
+    return admin.app();
+  }
 
-  return { app, auth, firestore };
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    throw new Error(
+      'FIREBASE_SERVICE_ACCOUNT environment variable is not set.'
+    );
+  }
+
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
+  firebaseAdmin = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+
+  return firebaseAdmin;
 }
+
+export { getFirebaseAdmin };
