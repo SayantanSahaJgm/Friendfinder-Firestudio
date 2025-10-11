@@ -1,18 +1,17 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { User, onAuthStateChanged } from 'firebase/auth';
 import { useAuth } from '../provider';
 
-interface AuthState {
+interface UserState {
   user: User | null;
   isUserLoading: boolean;
 }
 
-export function useUser(): AuthState {
+export function useUser(): UserState {
   const auth = useAuth();
-  const [user, setUser] = useState<User | null>(auth?.currentUser ?? null);
+  const [user, setUser] = useState<User | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
 
   useEffect(() => {

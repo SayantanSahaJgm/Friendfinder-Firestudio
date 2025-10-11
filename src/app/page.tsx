@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Camera, Loader2, Plus, WifiOff, Users } from 'lucide-react';
 import { PostCard } from '@/components/post-card';
 import { SmartSuggestions } from '@/components/smart-suggestions';
-import { useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
 import { useEffect, useState } from 'react';
 import { collection, query, orderBy, limit, serverTimestamp, doc } from 'firebase/firestore';
 import type { Post, Story } from '@/lib/types';
+import { useCollection, useFirebase, useMemoFirebase, useUser } from '@/firebase';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -105,8 +105,8 @@ function Feed() {
 }
 
 export default function Home() {
-  const { auth, firestore, isUserLoading } = useFirebase();
-  const { user } = useUser();
+  const { auth, firestore } = useFirebase();
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
     if (!isUserLoading && !user && auth) {
